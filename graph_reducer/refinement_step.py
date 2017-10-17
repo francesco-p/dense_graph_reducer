@@ -76,5 +76,7 @@ def degree_based(self):
 
     C0_cardinality = np.sum(self.classes == 0)
     if C0_cardinality > self.epsilon * self.N:
-        sys.exit("Error: not enough nodes in C0 to create a new class."
-                 "Try to increase epsilon or decrease the number of nodes in the graph")
+        #sys.exit("Error: not enough nodes in C0 to create a new class.Try to increase epsilon or decrease the number of nodes in the graph")
+        print("Error: not enough nodes in C0 to create a new class. Try to increase epsilon or decrease the number of nodes in the graph")
+        return False
+    return True

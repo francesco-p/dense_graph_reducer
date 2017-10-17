@@ -1,8 +1,8 @@
 import random
 import numpy as np
 
-from graph_reducer.classes_pair import ClassesPair
-from graph_reducer.classes_pair import WeightedClassesPair
+from classes_pair import ClassesPair
+from classes_pair import WeightedClassesPair
 
 
 class SzemerediRegularityLemma:
@@ -198,17 +198,17 @@ class SzemerediRegularityLemma:
             iteration += 1
             if verbose:
                 print("Iteration " + str(iteration))
-                print("Performing pairs regularity check")
+                #print("Performing pairs regularity check")
             num_of_irregular_pairs = self.check_pairs_regularity()
             if verbose:
                 total_pairs = (self.k * (self.k - 1)) / 2.0
-                print("irregular pairs / total pairs = " + str(num_of_irregular_pairs) + " / " + str(int(total_pairs)))
-                print("irregular pairs ratio = " + str(num_of_irregular_pairs / (self.epsilon * total_pairs)))
+                #print("irregular pairs / total pairs = " + str(num_of_irregular_pairs) + " / " + str(int(total_pairs)))
+                #print("irregular pairs ratio = " + str(num_of_irregular_pairs / (self.epsilon * total_pairs)))
                 print("k = " + str(self.k) + ". Class cardinality = " + str(
                     self.classes_cardinality) + ". Index = " + str(self.index_vec[-1]))
-                print("conditions verified = " + str(self.condition_verified))
+                #print("conditions verified = " + str(self.condition_verified))
 
-                print("Performing partition regularity check")
+                #print("Performing partition regularity check")
             if self.check_partition_regularity(num_of_irregular_pairs):
                 if verbose:
                     print("The partition is regular")
@@ -221,11 +221,16 @@ class SzemerediRegularityLemma:
                 break
             if verbose:
                 print("The partition is irregular, proceed to refinement")
-                print("Performing refinement")
-            self.refinement_step(self)
-            if iteration_by_iteration:
-                input("Press Enter to continue...")
-            if verbose:
-                print()
+                #print("Performing refinement")
+            res = self.refinement_step(self)
+            if res:
+                if iteration_by_iteration:
+                    input("Press Enter to continue...")
+                if verbose:
+                    print()
+            else:
+                print("Refinement Failed")
+                return None
+
         self.generate_reduced_sim_mat()
         return self.reduced_sim_mat

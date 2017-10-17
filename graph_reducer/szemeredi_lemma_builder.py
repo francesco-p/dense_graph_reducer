@@ -1,7 +1,7 @@
-import graph_reducer.szemeredi_regularity_lemma as srl
-from graph_reducer import partition_initialization
-from graph_reducer import refinement_step
-from graph_reducer import conditions
+import szemeredi_regularity_lemma as srl
+import partition_initialization
+import refinement_step
+import conditions
 
 
 def generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization,
