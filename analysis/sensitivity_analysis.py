@@ -45,7 +45,7 @@ def main():
     
     internoise_lvls = [0.5]
     
-    epsilons = [0.682,0.6825,0.6826,0.68265,0.6827,0.68275,0.6828,0.68285,0.6829,0.68295,0.683]
+    epsilons = [0.68285]
 
     for noise_val in noise_vals:
 
@@ -55,17 +55,17 @@ def main():
             
             for epsilon in epsilons:
 
-                print("------\n{0}_{1}_{2}_{3}_{4}_{5}".format(cluster_size, n_clusters, noise_val, internoise_lvl, epsilon, compression)) 
+                print("------\n{0}_{1}".format(internoise_lvl, epsilon)) 
                 
                 srla = slb.generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization, random_refinement, drop_edges_between_irregular_pairs)
 
-                reduced_matrix = srla.run(iteration_by_iteration=False, verbose=True, compression_rate=compression)
+                success, reduced_matrix = srla.run(iteration_by_iteration=False, verbose=True, compression_rate=compression)
 
-                if reduced_matrix.sum() == 0 :
+                if not success:
                     print("Failure")
                 else:
                     print("Success")    
-                    name = "./imgs/{0}_{1}_{2}_{3}_{4}_{5}".format(cluster_size, n_clusters, noise_val, internoise_lvl, epsilon, compression) 
+                    name = "./imgs/{0}_{1}".format(internoise_lvl, epsilon) 
                     np.save(name, reduced_matrix)
                     #plt.imshow(reduced_matrix)
                     #plt.show()

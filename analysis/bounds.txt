@@ -1,0 +1,11 @@
+internoise 0.5   
+
+e=0.682 k=526 regular
+
+e=0.6825 k=16 regular
+
+e=0.68285 k=8 regular
+
+e=0.686 k=4 regular
+
+e=0.688 k=2 regular

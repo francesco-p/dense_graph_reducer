@@ -198,30 +198,31 @@ class SzemerediRegularityLemma:
             iteration += 1
         
             num_of_irregular_pairs = self.check_pairs_regularity()
-            if verbose:
-                total_pairs = (self.k * (self.k - 1)) / 2.0
-                #print("k = " + str(self.k) + " class card = " + str(self.classes_cardinality) + " i = " + str(self.index_vec[-1]))
-                print("{0}, {1}, {2}, {3}".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]), end=", " )        
+            total_pairs = (self.k * (self.k - 1)) / 2.0
+
+            #if verbose:
+                #total_pairs = (self.k * (self.k - 1)) / 2.0
+                #print("{0}, {1}, {2}, {3}".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]), end=", " )        
             if self.check_partition_regularity(num_of_irregular_pairs):
                 if verbose:
-                    print("regular")
+                    print("{0}, {1}, {2}, {3}, regular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
+                    
                 break
 
             if self.k >= max_k:
                 if verbose:
-                    print("classes cardinality too low")
+                    print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))# irregular by definition
+# cardinality is too low
+                    return (False, None)
                 break
-            if verbose:
-                print("irregular")
+            #if verbose:
+                #print("irregular")
+
             res = self.refinement_step(self)
-            if res:
-                if iteration_by_iteration:
-                    input("Press Enter to continue...")
-                #if verbose:
-                    #print()
-            else:
-                print("refinement failed")
-                return None
+
+            if not res:
+                print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))# irregular by definition
+                return (False, None)
 
         self.generate_reduced_sim_mat()
-        return self.reduced_sim_mat
+        return (True, self.reduced_sim_mat)
