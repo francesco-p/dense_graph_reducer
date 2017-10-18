@@ -188,48 +188,39 @@ class SzemerediRegularityLemma:
             raise ValueError("incorrect compression rate. Only float greater than 0.0 are accepted")
 
         iteration = 0
-        if verbose:
-            print("Performing partition initialization")
+        
         self.partition_initialization(self, b)
+        
         while True:
             self.certs_compls_list = []
             self.regularity_list = []
             self.condition_verified = [0] * len(self.conditions)
             iteration += 1
-            if verbose:
-                print("Iteration " + str(iteration))
-                #print("Performing pairs regularity check")
+        
             num_of_irregular_pairs = self.check_pairs_regularity()
             if verbose:
                 total_pairs = (self.k * (self.k - 1)) / 2.0
-                #print("irregular pairs / total pairs = " + str(num_of_irregular_pairs) + " / " + str(int(total_pairs)))
-                #print("irregular pairs ratio = " + str(num_of_irregular_pairs / (self.epsilon * total_pairs)))
-                print("k = " + str(self.k) + ". Class cardinality = " + str(
-                    self.classes_cardinality) + ". Index = " + str(self.index_vec[-1]))
-                #print("conditions verified = " + str(self.condition_verified))
-
-                #print("Performing partition regularity check")
+                #print("k = " + str(self.k) + " class card = " + str(self.classes_cardinality) + " i = " + str(self.index_vec[-1]))
+                print("{0}, {1}, {2}, {3}".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]), end=", " )        
             if self.check_partition_regularity(num_of_irregular_pairs):
                 if verbose:
-                    print("The partition is regular")
+                    print("regular")
                 break
 
             if self.k >= max_k:
                 if verbose:
-                    print("Either the classes cardinality is too low or the number of classes is too high. "
-                          "Stopping iterations")
+                    print("classes cardinality too low")
                 break
             if verbose:
-                print("The partition is irregular, proceed to refinement")
-                #print("Performing refinement")
+                print("irregular")
             res = self.refinement_step(self)
             if res:
                 if iteration_by_iteration:
                     input("Press Enter to continue...")
-                if verbose:
-                    print()
+                #if verbose:
+                    #print()
             else:
-                print("Refinement Failed")
+                print("refinement failed")
                 return None
 
         self.generate_reduced_sim_mat()

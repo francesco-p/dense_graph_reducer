@@ -26,11 +26,9 @@ def main():
     Main function code
     """
     # Adj Mat constants
-    cluster_size = 1000
-    n_clusters = 10 
+    cluster_size = 1000 #Should be 1000
+    n_clusters = 10  #Should be 10
     intranoise_lvl = 0 
-    modality = "constant" 
-    noise_val = 1
 
     # Szemeredi algorithm constants
     kind = "alon"
@@ -38,37 +36,47 @@ def main():
     random_initialization = True 
     random_refinement = False # No choice random:TODO
     drop_edges_between_irregular_pairs = True
-
-
-    internoise_lvl = 0.5  # Analysis
     
-    sim_mat  = nbam.generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val)    
     
-    plt.imshow(sim_mat)
-    plt.show()
+    modality = "constant" 
+    noise_vals = [0.5]
 
-    for epsilon in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
-
-        print("{0}\nepsilon: {1} internoise_lvl:{2}".format("-"*6, epsilon, internoise_lvl))
-
-        srla = slb.generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization, random_refinement, drop_edges_between_irregular_pairs)
-
-        reduced_matrix = srla.run(iteration_by_iteration=False, verbose=True, compression_rate=0.05)
-
-        if reduced_matrix.sum() == 0 :
-            print("Failure")
-        else:
-            print("Success")    
-            plt.imshow(reduced_matrix)
-            plt.show()
-            #for thresh in [0.5, 1]:
-            #ng = srla.reconstruct_original_mat(0.5)
-            #plt.imshow(ng)
-            #plt.show()
-            #print(compute_distance(sim_mat, ng))
-                # TODO
-
+    compression = 0.05
     
+    internoise_lvls = [0.5]
+    
+    epsilons = [0.682,0.6825,0.6826,0.68265,0.6827,0.68275,0.6828,0.68285,0.6829,0.68295,0.683]
+
+    for noise_val in noise_vals:
+
+        for internoise_lvl in internoise_lvls:
+
+            sim_mat  = nbam.generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val)    
+            
+            for epsilon in epsilons:
+
+                print("------\n{0}_{1}_{2}_{3}_{4}_{5}".format(cluster_size, n_clusters, noise_val, internoise_lvl, epsilon, compression)) 
+                
+                srla = slb.generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization, random_refinement, drop_edges_between_irregular_pairs)
+
+                reduced_matrix = srla.run(iteration_by_iteration=False, verbose=True, compression_rate=compression)
+
+                if reduced_matrix.sum() == 0 :
+                    print("Failure")
+                else:
+                    print("Success")    
+                    name = "./imgs/{0}_{1}_{2}_{3}_{4}_{5}".format(cluster_size, n_clusters, noise_val, internoise_lvl, epsilon, compression) 
+                    np.save(name, reduced_matrix)
+                    #plt.imshow(reduced_matrix)
+                    #plt.show()
+                    #for thresh in [0.5, 1]:
+                    #ng = srla.reconstruct_original_mat(0.5)
+                    #plt.imshow(ng)
+                    #plt.show()
+                    #print(compute_distance(sim_mat, ng))
+                        # TODO
+
+        
 
 if __name__ == "__main__":
     main()
