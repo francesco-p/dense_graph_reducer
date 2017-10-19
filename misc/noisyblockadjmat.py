@@ -9,6 +9,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def custom_noisy_matrix(mat_dim, dims, internoise_lvl, noise_val):
+    """
+    Custom noisy matrix
+    mat_dim : dimension of the whole graph
+    dims: list of cluster dimensions
+    internoise_lvl : level of noise between clusters
+    noise_lvl : value of the noise
+    """
+    if len(dims) > mat_dim:
+        sys.exit("You want more cluster than nodes???")
+        return 0  
+
+    if sum(dims) != mat_dim:
+        sys.exit("The sum of clusters dimensions must be equal to the total number of nodes")
+        return 0
+
+    mat = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
+    mat = np.multiply(mat, noise_val)
+    x = 0              
+    for dim in dims: 
+        mat[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1)    
+        x += dim   
+
+    return mat + mat.T
+
 def generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val):
     """
     Generate a noisy adjacency matrix with noisy cluster over the diagonal. The computed matrix will have size = n_cluster * cluster_size
@@ -21,7 +46,6 @@ def generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, mo
     noise_val: the constant value to represent noise, used in combination with mode='constant'
 
     Returns the noisy block adjacency matrix
-
     """
 
     mat_size = cluster_size * n_clusters
