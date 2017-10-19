@@ -1,11 +1,17 @@
 internoise 0.5   
 
-e=0.682 k=526 regular
+0.6756    irregular 
+0.68072
 
-e=0.6825 k=16 regular
+0.68098 526 regular
+0.6824
 
-e=0.68285 k=8 regular
+0.682404 16 regular
+0.6825
 
-e=0.686 k=4 regular
+0.68285 8 regular
+0.68280
 
-e=0.688 k=2 regular
+0.686 4 regular
+
+0.688 2 regular

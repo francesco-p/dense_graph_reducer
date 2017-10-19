@@ -14,7 +14,7 @@ import noisyblockadjmat as nbam
 
 def compute_distance(GT, NG):
     """
-    Compute the distance between two matrices
+    Compute the L2 distance between two matrices
     """
     diff = np.subtract(GT,NG)
     diff = np.square(diff)
@@ -29,6 +29,8 @@ def main():
     cluster_size = 1000 #Should be 1000
     n_clusters = 10  #Should be 10
     intranoise_lvl = 0 
+    modality = "constant" 
+    noise_val = 0.5
 
     # Szemeredi algorithm constants
     kind = "alon"
@@ -36,45 +38,52 @@ def main():
     random_initialization = True 
     random_refinement = False # No choice random:TODO
     drop_edges_between_irregular_pairs = True
-    
-    
-    modality = "constant" 
-    noise_vals = [0.5]
-
     compression = 0.05
     
-    internoise_lvls = [0.5]
     
-    epsilons = [0.68285]
+    # To analyze
+    internoise_lvl = 0.5 
+    #epsilons = [0.6756, 0.6825, 0.68280, 0.686]
 
-    for noise_val in noise_vals:
+    epsilons = []
+    epsilon1 = 0.681
+    epsilon2 = 0.68758
+    tries = 100.0
+    offs = (epsilon2 - epsilon1) / tries 
+    for i in range(1, int(tries)+1):
+        epsilons.append(epsilon1 + (i*offs))
 
-        for internoise_lvl in internoise_lvls:
+    sim_mat  = nbam.generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val)    
+    #sim_mat  = nbam.custom_noisy_matrix(cluster_size*n_clusters, [7000,3000], internoise_lvl, noise_val)    
 
-            sim_mat  = nbam.generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val)    
+    k_dist = {} 
             
-            for epsilon in epsilons:
+    for epsilon in epsilons:
 
-                print("------\n{0}_{1}".format(internoise_lvl, epsilon)) 
+        print("------\n{0}_{1:.6f}".format(internoise_lvl, epsilon)) 
                 
-                srla = slb.generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization, random_refinement, drop_edges_between_irregular_pairs)
+        srla = slb.generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization, random_refinement, drop_edges_between_irregular_pairs)
 
-                success, reduced_matrix = srla.run(iteration_by_iteration=False, verbose=True, compression_rate=compression)
+        regular, k, reduced_matrix = srla.run(iteration_by_iteration=False, verbose=True, compression_rate=compression)
 
-                if not success:
-                    print("Failure")
-                else:
-                    print("Success")    
-                    name = "./imgs/{0}_{1}".format(internoise_lvl, epsilon) 
-                    np.save(name, reduced_matrix)
-                    #plt.imshow(reduced_matrix)
-                    #plt.show()
-                    #for thresh in [0.5, 1]:
-                    #ng = srla.reconstruct_original_mat(0.5)
-                    #plt.imshow(ng)
-                    #plt.show()
-                    #print(compute_distance(sim_mat, ng))
-                        # TODO
+        if (k not in k_dist) and regular:      
+            dists = []
+            #name = "./imgs/red_{0}_{1:.6f}".format(internoise_lvl, epsilon)
+            #np.save(name, reduced_matrix)
+            for thresh in np.arange(0, 1, 0.05): 
+                ng = srla.reconstruct_original_mat(thresh, 0)
+                #name = "./imgs/rec_{0}_{1:.6f}".format(internoise_lvl, epsilon)
+                #np.save(name , ng)
+                dist = compute_distance(sim_mat, ng)
+                dists.append(dist)
+                #name = "./imgs/{0}_{1:.6f}_{2}.npy".format(internoise_lvl, epsilon, k)
+                #np.save(name , dists)
+                print(dist)
+
+            k_dist[k] = dists 
+            
+    name = "./imgs/{0}_all2.npy".format(internoise_lvl)
+    np.save(name , k_dist)
 
         
 

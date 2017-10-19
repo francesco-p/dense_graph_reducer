@@ -82,20 +82,25 @@ class SzemerediRegularityLemma:
                     cl_pair = ClassesPair(self.adj_mat, self.classes, r, s, self.epsilon)
                 self.reduced_sim_mat[r - 1, s - 1] = self.reduced_sim_mat[s - 1, r - 1] = cl_pair.bip_density
 
-    def reconstruct_original_mat(self, thresh):
+    def reconstruct_original_mat(self, thresh, intracluster_weight=0):
         """
         reconstruct a similarity matrix with size equals to the original one, from the reduced similarity matrix
         :param thresh: a threshold parameter to prune the edges of the graph
         :return:
+
+        TODO: IMPLEMENT RANDOM SAMPLING
+
         """
         reconstructed_mat = np.zeros((self.N, self.N))
 
         r_nodes = self.classes == 1
-        reconstructed_mat[np.ix_(r_nodes, r_nodes)] = thresh
+        reconstructed_mat[np.ix_(r_nodes, r_nodes)] = intracluster_weight 
+        #reconstructed_mat[np.ix_(r_nodes, r_nodes)] = thresh 
 
         for r in range(2, self.k + 1):
             r_nodes = self.classes == r
-            reconstructed_mat[np.ix_(r_nodes, r_nodes)] = thresh
+            reconstructed_mat[np.ix_(r_nodes, r_nodes)] = intracluster_weight
+            #reconstructed_mat[np.ix_(r_nodes, r_nodes)] = thresh
             for s in range(1, r):
                 if self.is_weighted:
                     cl_pair = WeightedClassesPair(self.sim_mat, self.adj_mat, self.classes, r, s, self.epsilon)
@@ -196,33 +201,28 @@ class SzemerediRegularityLemma:
             self.regularity_list = []
             self.condition_verified = [0] * len(self.conditions)
             iteration += 1
-        
             num_of_irregular_pairs = self.check_pairs_regularity()
             total_pairs = (self.k * (self.k - 1)) / 2.0
 
-            #if verbose:
-                #total_pairs = (self.k * (self.k - 1)) / 2.0
-                #print("{0}, {1}, {2}, {3}".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]), end=", " )        
             if self.check_partition_regularity(num_of_irregular_pairs):
-                if verbose:
-                    print("{0}, {1}, {2}, {3}, regular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
+                
+                print("{0}, {1}, {2}, {3}, regular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
                     
                 break
 
             if self.k >= max_k:
-                if verbose:
-                    print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))# irregular by definition
-# cardinality is too low
-                    return (False, None)
-                break
-            #if verbose:
-                #print("irregular")
-
+                # Cardinality too low irregular by definition
+                print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
+                return (False, self.k, None)
+                
+            if verbose:
+                print("{0}, {1}, {2}, {3} irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]) )        
             res = self.refinement_step(self)
 
             if not res:
-                print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))# irregular by definition
-                return (False, None)
+                # Irregular by definition
+                print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
+                return (False, self.k, None)
 
         self.generate_reduced_sim_mat()
-        return (True, self.reduced_sim_mat)
+        return (True, self.k, self.reduced_sim_mat)
