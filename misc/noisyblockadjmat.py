@@ -9,6 +9,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+#def synthetic_regular_partition(k, epsilon):
+#
+#    mat = np.tril(np.random.random((k, k)), -1)
+#    
+#    np.random.choice(k**2, int(epsilon*(k**2))
+#
+#    return mat + mat.T 
+
 def custom_noisy_matrix(mat_dim, dims, internoise_lvl, noise_val):
     """
     Custom noisy matrix
