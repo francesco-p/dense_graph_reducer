@@ -13,7 +13,7 @@ def main(filename, internoise_lvl):
 
     dictionary = np.load(filename).item()
 
-    thresholds = np.arange(0, 1, 0.05)
+    thresholds = np.arange(0, 1.05, 0.05)
 
     for k in dictionary.keys():
         lab = "k={0}".format(k)

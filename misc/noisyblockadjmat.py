@@ -7,15 +7,49 @@ import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.io as sp
 
 
 #def synthetic_regular_partition(k, epsilon):
 #
 #    mat = np.tril(np.random.random((k, k)), -1)
-#    
+#
 #    np.random.choice(k**2, int(epsilon*(k**2))
 #
-#    return mat + mat.T 
+#    return mat + mat.T
+
+def graph_from_points(x, sigma):
+    """
+    Generates a graph (weighted graph) from a set of points x (nxd) and a sigma decay
+    :param x: a numpy matrix of n times d dimension
+    :param sigma: a sigma for the gaussian kernel
+    :return: a weighted symmetric graph
+    """
+
+    n = x.shape[0]
+    w_graph = np.zeros((n,n))
+
+    for i in range(0,n):
+        copy = np.tile(np.array(x[i, :]), (i+1, 1))
+        difference = copy - x[0:i+1, :]
+        column = np.exp(-sigma*(difference**2).sum(1))
+
+        #w_graph[0:i+1, i] = column
+        w_graph[0:i, i] = column[:-1] # set diagonal to 0 the resulting graph is different
+
+    return w_graph + w_graph.T
+
+
+def get_real_noisy_data():
+    """
+    Generates a graph from the noisy mat
+    """
+
+    data = sp.loadmat("/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/data/XPCA.mat")
+    m = data['X']
+
+    return graph_from_points(m, 0.0248)
+
 
 def custom_noisy_matrix(mat_dim, dims, internoise_lvl, noise_val):
     """
@@ -27,7 +61,7 @@ def custom_noisy_matrix(mat_dim, dims, internoise_lvl, noise_val):
     """
     if len(dims) > mat_dim:
         sys.exit("You want more cluster than nodes???")
-        return 0  
+        return 0
 
     if sum(dims) != mat_dim:
         sys.exit("The sum of clusters dimensions must be equal to the total number of nodes")
@@ -35,19 +69,19 @@ def custom_noisy_matrix(mat_dim, dims, internoise_lvl, noise_val):
 
     mat = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
     mat = np.multiply(mat, noise_val)
-    x = 0              
-    for dim in dims: 
-        mat[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1)    
-        x += dim   
+    x = 0
+    for dim in dims:
+        mat[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1)
+        x += dim
 
     return mat + mat.T
 
 def generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val):
     """
     Generate a noisy adjacency matrix with noisy cluster over the diagonal. The computed matrix will have size = n_cluster * cluster_size
-       
+
     n_clusters: number of cluster
-    cluster_size: size of a single cluster 
+    cluster_size: size of a single cluster
     internoise_lvl: percentage of noise between the clusters (0.0 for no noise)
     intranoise_lvl: percentage of noise within a cluster (0.0 for completely connected clusters)
     modality: the nature of the noise. Currently the supported values are 'weighted' and 'constant'
@@ -102,13 +136,13 @@ def main():
     parser.add_argument("internoise_lvl", help="Percentage of noise between the clusters (0 for no noise) the noise weight is a Uniform(0,1) distribution", type=float)
     parser.add_argument("intranoise_lvl", help="Percentage of noise within each cluster (0 for no noise) the noise weight is a Uniform(0,1) distribution", type=float)
     parser.add_argument("--constant", help="Set constant nature of noise, if this parameter is omitted weighted noise is assumed (an edge has random number from 0 to 1)", type=float)
-    
+
     parser.add_argument("--plot", help="Show a plot of the generated matrix", action="store_true")
-    
+
 
     args = parser.parse_args()
 
-    cluster_size = args.cluster_size 
+    cluster_size = args.cluster_size
     n_clusters = args.n_cluster
     internoise_lvl = args.internoise_lvl
     intranoise_lvl = args.intranoise_lvl
@@ -130,4 +164,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
+
