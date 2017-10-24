@@ -157,7 +157,7 @@ def main():
         lab = f"k={k}"
         plt.plot(thresholds, k_dist[k], label=lab)
 
-    plt.title(f"Internoise level {internoise_lvl}")
+    plt.title(f"Internoise level: {internoise_lvl} clusters sizes: {aux}")
     plt.ylabel('Distance')
     plt.xlabel('Reconstruction Threshold')
     plt.legend(loc='upper left')

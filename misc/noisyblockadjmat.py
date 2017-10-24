@@ -10,13 +10,29 @@ import matplotlib.pyplot as plt
 import scipy.io as sp
 
 
-#def synthetic_regular_partition(k, epsilon):
-#
-#    mat = np.tril(np.random.random((k, k)), -1)
-#
-#    np.random.choice(k**2, int(epsilon*(k**2))
-#
-#    return mat + mat.T
+def synthetic_regular_partition(k, epsilon):
+    """
+    Generates a synthetic regular partition.
+    :param k: the cardinality of the partition
+    :param epsilon: the epsilon parameter to calculate the number of irregular pairs
+    :return: a weighted symmetric graph
+    """
+
+    # Generate a kxk matrix where each element is between (0,1]
+    mat = np.tril(1-np.random.random((k, k)), -1)
+
+    x = np.tril_indices_from(mat, -1)[0]
+    y = np.tril_indices_from(mat, -1)[1]
+
+    # Generate a random number between 0 and epsilon*k**2 (number of irregular pairs)
+    n_irr_pairs = round(np.random.uniform(0, epsilon*(k**2)))
+
+    # Select the indices of the irregular  pairs
+    irr_pairs = np.random.choice(len(x), n_irr_pairs)
+
+    mat[(x[irr_pairs],  y[irr_pairs])] = 0
+
+    return mat + mat.T
 
 def graph_from_points(x, sigma):
     """
