@@ -49,13 +49,23 @@ def main():
     # Fixed size clusters
     #c_dimensions = [cluster_size, n_clusters]
     #graph  = nbam.generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val)
+    #ground_truth  = nbam.generate_matrix(cluster_size, n_clusters, 0, intranoise_lvl, modality, noise_val)
+
     # OR
+
     # Custom size clusters
-    #c_dimensions = [5000, 2000, 2500, 500]
-    #graph  = nbam.custom_noisy_matrix(cluster_size*n_clusters, c_dimensions, internoise_lvl, noise_val)
+    c_dimensions = [4000, 3000, 2000, 500, 500]
+    graph  = nbam.custom_noisy_matrix(cluster_size*n_clusters, c_dimensions, internoise_lvl, noise_val)
+    ground_truth  = nbam.custom_noisy_matrix(cluster_size*n_clusters, c_dimensions, 0, noise_val)
+
+    #plt.show(plt.imshow(graph))
+    #plt.show(plt.imshow(ground_truth))
+
     # OR
-    c_dimensions = ['real_noise']
-    graph = rd.get_real_noisy_data()
+
+    #c_dimensions = ['real_noise']
+    #graph = rd.get_real_noisy_data()
+    #ground_truth  = nbam.generate_matrix(cluster_size, n_clusters, 0, intranoise_lvl, modality, noise_val)
 
     # Needs to be defined inside the main scope because graph must be referenced outside, otherwise will use all the RAM since it's a recursive function
     def find_trivial_epsilon(epsilon1, epsilon2, k_min, tolerance):
@@ -120,6 +130,7 @@ def main():
     epsilon1 = find_edge_epsilon(0.1,epsilon2,0.0001)
     print("Edge epsilon candidate: {0:.6f}".format(epsilon1))
 
+
     epsilons = [epsilon1]
 
     tries = 20.0
@@ -127,9 +138,11 @@ def main():
     for i in range(1, int(tries)+1):
         epsilons.append(epsilon1 + (i*offs))
 
+
     k_dist = {}
     thresholds = np.arange(0, 1.05, 0.05)
 
+    # For each epsilon compute szemeredi and if we have never seen a partition of k elements then reduce the noisy graph and compute the error
     for epsilon in epsilons:
 
         srla = slb.generate_szemeredi_reg_lemma_implementation(kind, graph, epsilon, is_weighted, random_initialization, random_refinement, drop_edges_between_irregular_pairs)
@@ -143,16 +156,24 @@ def main():
             dists = []
             for thresh in thresholds:
                 reconstructed_graph = srla.reconstruct_original_mat(thresh)
-                distance = L2_distance(graph, reconstructed_graph)
+                #distance = L2_distance(graph, reconstructed_graph) # Studies compression capacities
+                distance = L2_distance(ground_truth, reconstructed_graph)/(cluster_size*n_clusters)# Studies noise filtering
                 dists.append(distance)
                 print(distance)
 
             k_dist[k] = dists
 
+
+    # Save a dictionary of the results (we can plot it directly with plot.py)
     aux = "_".join(str(e) for e in c_dimensions)
     name = f"./imgs/{internoise_lvl}_{aux}.npy"
     np.save(name , k_dist)
 
+    # Save the bounds of the analysis
+    with open("./imgs/bounds.txt", "a") as myfile:
+        myfile.write("{0}_{1}_{2}\n".format(internoise_lvl, aux, epsilons))
+
+    # Generate the plot
     for k in k_dist.keys():
         lab = f"k={k}"
         plt.plot(thresholds, k_dist[k], label=lab)
