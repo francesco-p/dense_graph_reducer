@@ -19,6 +19,7 @@ def main(filename, title):
         lab = "k={0}".format(k)
         plt.plot(thresholds, dictionary[k], label=lab) 
 
+
     s = ""
     for word in title:
         s += " " + word
@@ -26,7 +27,7 @@ def main(filename, title):
     plt.title(s)
     plt.ylabel('Distance')
     plt.xlabel('Reconstruction Threshold')
-    plt.legend(loc='upper right')
+    plt.legend(loc='lower right')
 
     plt.show()
 
