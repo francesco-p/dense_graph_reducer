@@ -14,6 +14,7 @@ import szemeredi_lemma_builder as slb
 import noisyblockadjmat as nbam
 import real_data as rd
 
+
 def L2_distance(GT, NG):
     """
     Compute the L2 distance between two matrices
@@ -74,7 +75,7 @@ def create_graphs(kind, args):
             sigma = args.sigma 
             to_remove = args.to_remove 
             NG, GT, tot_dim = rd.get_XPCA_data(sigma, to_remove)
-            title = f'XPCA_dataset_{sigma}'
+            title = f'XPCA_dataset_{sigma:.3f}'
             return NG, GT, title, tot_dim
 
         elif dataset == 'GColi1':
@@ -86,7 +87,7 @@ def create_graphs(kind, args):
             sigma = args.sigma 
             name = args.UCI 
             NG, GT, tot_dim = rd.get_UCI_data(name, sigma)
-            title = f'UCI_{name}_dataset_sigma_{sigma}'
+            title = f'UCI_{name}_dataset_sigma_{sigma:.10f}'
             return NG, GT, title, tot_dim
 
         #elif dataset == 'UCI_iris':
