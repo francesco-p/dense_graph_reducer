@@ -7,9 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import sys
-sys.path.insert(0, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/misc')
 sys.path.insert(1, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/graph_reducer')
-sys.path.insert(2, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/data')
 import szemeredi_lemma_builder as slb
 import noisyblockadjmat as nbam
 import real_data as rd
@@ -76,6 +74,10 @@ def create_graphs(kind, args):
             to_remove = args.to_remove 
             NG, GT, tot_dim = rd.get_XPCA_data(sigma, to_remove)
             title = f'XPCA_dataset_{sigma:.3f}'
+            if args.dryrun:
+                plt.show(plt.imshow(NG))
+                plt.show(plt.imshow(GT))
+                sys.exit("Dryrun") # TODO
             return NG, GT, title, tot_dim
 
         elif dataset == 'GColi1':
@@ -88,13 +90,12 @@ def create_graphs(kind, args):
             name = args.UCI 
             NG, GT, tot_dim = rd.get_UCI_data(name, sigma)
             title = f'UCI_{name}_dataset_sigma_{sigma:.10f}'
-            return NG, GT, title, tot_dim
 
-        #elif dataset == 'UCI_iris':
-        #    sigma = args.sigma 
-        #    NG, GT, tot_dim = rd.get_UCI_iris_data(sigma)
-        #    title = f'UCI_iris_dataset_sigma_{sigma}'
-        #    return NG, GT, title, tot_dim
+            if args.dryrun:
+                plt.show(plt.imshow(NG))
+                plt.show(plt.imshow(GT))
+                sys.exit("Dryrun") # TODO
+            return NG, GT, title, tot_dim
 
 
 def main(graph_type, args):
@@ -137,7 +138,7 @@ def main(graph_type, args):
                     return find_trivial_epsilon(epsilon_middle, epsilon2, k_min, tolerance)
                 else:
                     del srla
-                    return -1 # WTF
+                    return -1 # WTF... just in case
             else:
                 del srla
                 return find_trivial_epsilon(epsilon_middle, epsilon2, k_min, tolerance)
@@ -173,10 +174,10 @@ def main(graph_type, args):
             epsilon2 = bounds[1]
     else:
         print("Finding trivial epsilon...")
-        epsilon2 = find_trivial_epsilon(0.1,0.9, 2, 0.0001)
+        epsilon2 = find_trivial_epsilon(0.1,0.9, 2, 0.00001)
         print("Trivial epsilon candidate: {0:.6f}".format(epsilon2))
         print("Finding edge epsilon...")
-        epsilon1 = find_edge_epsilon(0.1,epsilon2,0.0001)
+        epsilon1 = find_edge_epsilon(0.1,epsilon2,0.00001)
         print("Edge epsilon candidate: {0:.6f}".format(epsilon1))
 
     epsilons = [epsilon1]
@@ -275,8 +276,10 @@ if __name__ == "__main__":
     real_p.add_argument("-bounds", "-b", help="Two epsilon bound", nargs=2, type=float)
     real_p.add_argument("dataset", help="Dataset name", choices=["XPCA", "GColi1", "UCI"])
     real_p.add_argument("-UCI", "-u", help="Dataset from UCI requires a name")
-    # only with xpca
     real_p.add_argument("-sigma", "-s", help="Dataset sigma", type=float, default=0.0124)
+    real_p.add_argument("-dryrun",  help="Performs a dry run then exits", action="store_true")
+
+    # Only with xpca
     real_p.add_argument("-to_remove", "-r", help="Dataset number of columns to remove", type=int, default=0)
 
     real_p.add_argument("--plot", help="Show a plot of the generated matrix", action="store_true")

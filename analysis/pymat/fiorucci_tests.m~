@@ -1,0 +1,13 @@
+load('data/iris.mat');
+NG = my_connect(NG);
+NG_t = ComputeAmpCommuteKernel(NG);
+
+% Normalization
+NG_t = NG_t / max(NG_t(:));
+NG_t = NG_t - 1;
+NG_t = abs(NG_t);
+
+d = l2_dist(GT, NG_t)/numel(GT)
+
+maxel = max(NG_t(:))
+minel = min(NG_t(:))
