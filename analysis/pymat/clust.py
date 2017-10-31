@@ -14,22 +14,8 @@ def get_NG_t(name):
     return data['NG_t']
 
 
-
-def get_SZE_rec(ng):
-
-
-
-    sa.main()
-
-
-
-
-
-
-
-
 #rounding problem ("column3C", 0.0004, 3),
-dsets = [ ("ecoli", 0.475, 8), ("ionosphere", 0.12, 2), ("iris", 0.02, 3), ("userknowledge", 0.42, 4), ("spect-singleproton", 1.5, 2)]
+dsets = [("ecoli", 0.475, 8), ("ionosphere", 0.12, 2), ("iris", 0.02, 3), ("userknowledge", 0.42, 4), ("spect-singleproton", 1.5, 2)]
 
 
 for dset, sigma, k in dsets:
