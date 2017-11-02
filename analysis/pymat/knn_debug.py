@@ -5,11 +5,11 @@ import pdb
 
 import sys
 sys.path.insert(1, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis')
-import real_data as rd
+import process_datasets as pd
 
 
 
-NG, GT, tot_dim = rd.get_UCI_data('ecoli', 0.475)
+NG, GT, tot_dim = pd.get_UCI_data('ecoli', 0.475)
 
 
 n = GT.shape[0]

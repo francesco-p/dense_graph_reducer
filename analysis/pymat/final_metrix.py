@@ -10,12 +10,13 @@ from sklearn.cluster import KMeans
 from sklearn.cluster import SpectralClustering 
 from sklearn import metrics
 import pdb
+import math
 
 import sys
 sys.path.insert(0, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/graph_reducer/')
 sys.path.insert(1, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/')
 import szemeredi_lemma_builder as slb
-import real_data as rd
+import process_datasets as pd
 
 
 def get_NG_t(name):
@@ -25,7 +26,7 @@ def get_NG_t(name):
 
 
 def create_UCI_graphs(name, sigma):
-    NG, GT, tot_dim = rd.get_UCI_data(name, sigma)
+    NG, GT, tot_dim = pd.get_UCI_data(name, sigma)
     title = f'UCI_{name}_dataset_sigma_{sigma:.10f}'
     return NG, GT, title, tot_dim
 
@@ -53,7 +54,7 @@ def knn_voting_system(G, ind_vector, k):
     return ars 
 
 #pdb.set_trace()
-dset = 'ecoli'
+dset = 'userknowledge'
 #sigma = 0.475
 sigma = float(sys.argv[1])
 
@@ -65,18 +66,36 @@ random_refinement = False
 drop_edges_between_irregular_pairs = True
 compression = 0.05
 
-
-# ECOLI IND VECTOR
-ind_vector = np.zeros(336)
-ind_vector[0:144] = 1
-ind_vector[144:221] = 2
-ind_vector[221:223] = 3
-ind_vector[223:225] = 4
-ind_vector[225:260] = 5
-ind_vector[260:280] = 6
-ind_vector[280:285] = 7
-ind_vector[285:336] = 8
-
+if dset == 'ecoli':
+    #sigma = 0.475
+    # ECOLI IND VECTOR
+    ind_vector = np.zeros(336)
+    ind_vector[0:144] = 1
+    ind_vector[144:221] = 2
+    ind_vector[221:223] = 3
+    ind_vector[223:225] = 4
+    ind_vector[225:260] = 5
+    ind_vector[260:280] = 6
+    ind_vector[280:285] = 7
+    ind_vector[285:336] = 8
+elif dset == 'ionosphere':
+    #sigma = 0.12
+    # iono IND VECTOR
+    ind_vector = np.zeros(351)
+    ind_vector[0:126] = 1
+    ind_vector[126:351] = 2
+elif dset == 'userknowledge':
+    #sigma = 0.42
+    ind_vector = np.zeros(258)
+    ind_vector[0:64] = 1
+    ind_vector[64:152] = 2
+    ind_vector[152:235] = 3
+    ind_vector[235:258] = 4
+elif dset == 'spect-singleproton':
+    #sigma = 1.5  
+    ind_vector = np.zeros(267)
+    ind_vector[0:56] = 1
+    ind_vector[56:267] = 4
 
 NG, GT, title, tot_dim = create_UCI_graphs(dset, sigma) 
 
@@ -140,11 +159,28 @@ for i in range(1, int(tries)+1):
 # Dictrionary to hold all the different distances of each different partition k
 thresholds = np.arange(0, 1.05, 0.05)
 
+knn_values = [3, 5, 10, 15, int(math.sqrt(GT.shape[0]))]
 
-for knn in [3, 5, 10, 15]:
+knn_three = {}
+for knn in knn_values:
 
     k_dist = {}
 
+    # Points structure
+    points = [] 
+
+    # NG idx 
+    distance = knn_voting_system(NG, ind_vector, knn)
+    print(f"NG :     ars_idx: {distance:.4}")
+    points.append(distance) 
+
+    # NG_t idx 
+    NG_t = get_NG_t(dset)
+    distance = knn_voting_system(abs(NG_t-1), ind_vector, knn)
+    print(f"NG_t :     ars_idx: {distance:.4}")
+    points.append(distance) 
+
+    all_dists = {} 
     for epsilon in epsilons:
 
         srla = slb.generate_szemeredi_reg_lemma_implementation(kind, NG, epsilon, is_weighted, random_initialization, random_refinement, drop_edges_between_irregular_pairs)
@@ -152,7 +188,7 @@ for knn in [3, 5, 10, 15]:
 
         if (k not in k_dist) and regular and k!=2:
             print(f"FOUND PARTITION K {k} knn{knn}")
-            dists = []
+            dsts = [] 
             print("SZE:")
             for thresh in thresholds:
                 
@@ -160,38 +196,49 @@ for knn in [3, 5, 10, 15]:
                 distance = knn_voting_system(SZE_rec, ind_vector, knn) 
 
                 print(f"    ars_idx:{distance:.4} knn:{knn}  k: {k}  thresh: {thresh:.2}")
-                dists.append(distance)
+                all_dists[distance] = (k, thresh)
+                
+                dsts.append(distance)
 
-            k_dist[k] = dists 
+        k_dist[k] = dsts 
 
-    # NG idx 
-    plt.figure()
-    distance = knn_voting_system(NG, ind_vector, knn)
-    print(f"NG :     ars_idx: {distance:.4}")
-    lab = 'NG'
-    plt.plot(thresholds, [distance]*len(thresholds), label=lab)
+    # LOST
+    kmax = all_dists[max(all_dists.keys())][0]
+    tmax = all_dists[max(all_dists.keys())][1]
 
-    # NG idx 
-    #NG_t = get_NG_t(dset)
-    #distance = knn_voting_system(abs(NG_t-1), ind_vector, knn)
-    #print(f"NG_t :     ars_idx: {distance:.4}")
-    #lab = 'abs(NG_t-1)'
-    #plt.plot(thresholds, [distance]*len(thresholds), label=lab)
+    sze_max = max(all_dists.keys())
+    points.append(sze_max)
+
+    knn_three[knn] = points
+
+ngs = []
+ngts = []
+szes = []
+for k_n in knn_three.keys():
+    a = knn_three[k_n]
+    ngs.append(a[0])
+    ngts.append(a[1])
+    szes.append(a[2])
+
+#print(ngs)
+#print(ngts)
+#print(szes)
 
 
-    # Generate the plot TODO
-    for k in k_dist.keys():
-        lab = f"k={k}"
-        plt.plot(thresholds, k_dist[k], label=lab)
+# Generate the plot TODO
+plt.plot(knn_values, ngs, label="NG")
+plt.plot(knn_values, ngts, label="abs(NG_t-1)")
+plt.plot(knn_values, szes, label="best SZE")
 
-    ttl = f"{title}_knn_{knn}"
-    plt.title(f"{ttl}")
-    plt.ylabel('adj_rnd_idx')
-    plt.xlabel('Reconstruction Threshold')
-    plt.legend(loc='lower right')
-    plt.savefig(f"./imgs/{ttl}.png")
+ttl = f"{title}"
+plt.title(f"{ttl}")
+plt.ylabel('adj_rnd_idx')
+plt.xlabel('k of knn')
+plt.xticks(knn_values, knn_values)
+plt.legend(loc='upper right')
+plt.savefig(f"./imgs/{ttl}_points.png")
 
-    #plt.show()
+#plt.show()
 
 # Amplitude Commute Time Kernel
 #NG_t = get_NG_t(dset)

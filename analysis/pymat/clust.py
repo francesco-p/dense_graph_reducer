@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/')
 sys.path.insert(1, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/graph_reducer/')
-import real_data as rd
+import process_datasets as pd
 import sensitivity_analysis as sa
 
 def get_NG_t(name):
@@ -23,7 +23,7 @@ for dset, sigma, k in dsets:
     print(f"---- {dset} {sigma} {k} ----")
 
     # 1. NG 
-    NG, GT, tot_dim = rd.get_UCI_data(dset, sigma)
+    NG, GT, tot_dim = pd.get_UCI_data(dset, sigma)
     # K-means 
     kmeans = KMeans(n_clusters=k).fit(GT)
     pred = kmeans.predict(NG)

@@ -13,6 +13,7 @@ def graph_from_points(x, sigma, to_remove=0):
     Generates a graph (weighted graph) from a set of points x (nxd) and a sigma decay
     :param x: a numpy matrix of n times d dimension
     :param sigma: a sigma for the gaussian kernel
+    :param to_remove: imbalances the last cluster
     :return: a weighted symmetric graph
     """
 
@@ -35,7 +36,7 @@ def get_XPCA_data(sigma, to_remove):
 
     c_dimensions = ['XPCA']
 
-    data = sp.loadmat("/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/data/XPCA.mat")
+    data = sp.loadmat("data/XPCA.mat")
 
     arr_feature = data['X']
     NG = graph_from_points(arr_feature, sigma, to_remove) #0.0124 00248  0.0496 e 0.0744
@@ -54,8 +55,13 @@ def get_XPCA_data(sigma, to_remove):
 
 
 def get_UCI_data(name, sigma):
-    arr_feature = genfromtxt(f"/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/data/UCI_datasets/{name}_features", delimiter=',')
-    arr_labels = genfromtxt(f"/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/data/UCI_datasets/{name}_labelled", delimiter=',', dtype=str)
+    """
+    Process UCI dataset in data/UCI_datasets folder
+    :param name: the name of the dataset
+    :param sigma: sigma of the kernel to be applied
+    """
+    arr_feature = genfromtxt(f"data/UCI_datasets/{name}_features", delimiter=',')
+    arr_labels = genfromtxt(f"data/UCI_datasets/{name}_labelled", delimiter=',', dtype=str)
 
     arr_labels = arr_labels[:,-1]
 
@@ -80,7 +86,7 @@ def get_UCI_data(name, sigma):
 
 def get_GColi1_data():
     
-    data = sp.loadmat("/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/data/GCoil1.mat")
+    data = sp.loadmat("data/GCoil1.mat")
     NG = data['GCoil1']
     GT  = nbam.generate_matrix(72, 20, 0, 0, 'constant', 0)
 

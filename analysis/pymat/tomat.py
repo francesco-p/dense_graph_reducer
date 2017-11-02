@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/analysis/')
 
-import real_data as rd
+import process_datasets as pd
 import scipy.io as spio
 import matplotlib.pyplot as plt
 
@@ -17,7 +17,7 @@ for dset, sigma in dsets:
 
     print(f"Processing dataset: {dset} ...")
 
-    NG, GT, tot_dim = rd.get_UCI_data(dset, sigma)
+    NG, GT, tot_dim = pd.get_UCI_data(dset, sigma)
 
     data['NG'] = NG
     data['GT'] = GT.astype(float)

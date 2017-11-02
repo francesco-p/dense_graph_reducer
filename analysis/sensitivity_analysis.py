@@ -1,16 +1,20 @@
 """
 UTF-8
 author: francesco-p
+
+1. numpy array 32 bit
+2. refactor reconstruction matrix
+
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import sys
-sys.path.insert(1, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/graph_reducer')
+sys.path.insert(1, '../graph_reducer/')
 import szemeredi_lemma_builder as slb
 import noisyblockadjmat as nbam
-import real_data as rd
+import process_datasets as pd
 
 
 def L2_distance(GT, NG):
@@ -72,7 +76,7 @@ def create_graphs(kind, args):
         if dataset == 'XPCA':
             sigma = args.sigma 
             to_remove = args.to_remove 
-            NG, GT, tot_dim = rd.get_XPCA_data(sigma, to_remove)
+            NG, GT, tot_dim = pd.get_XPCA_data(sigma, to_remove)
             title = f'XPCA_dataset_{sigma:.3f}'
             if args.dryrun:
                 plt.show(plt.imshow(NG))
@@ -81,14 +85,14 @@ def create_graphs(kind, args):
             return NG, GT, title, tot_dim
 
         elif dataset == 'GColi1':
-            NG, GT, tot_dim = rd.get_GColi1_data()
+            NG, GT, tot_dim = pd.get_GColi1_data()
             title = 'GColi1_dataset'
             return NG, GT, title, tot_dim
 
         elif dataset == 'UCI':
             sigma = args.sigma 
             name = args.UCI 
-            NG, GT, tot_dim = rd.get_UCI_data(name, sigma)
+            NG, GT, tot_dim = pd.get_UCI_data(name, sigma)
             title = f'UCI_{name}_dataset_sigma_{sigma:.10f}'
 
             if args.dryrun:
@@ -96,7 +100,6 @@ def create_graphs(kind, args):
                 plt.show(plt.imshow(GT))
                 sys.exit("Dryrun") # TODO
             return NG, GT, title, tot_dim
-
 
 def main(graph_type, args):
     """
@@ -269,7 +272,6 @@ if __name__ == "__main__":
     group1 = custom_p.add_mutually_exclusive_group(required=True)
     group1.add_argument("-constant_noise", help="Set constant nature of noise", type=float, default=0.5)
     group1.add_argument("-random_noise", help="Set uniform nature of noise (between 0 and 1)", action="store_true")
-
 
     # Real dataset
     real_p = subparsers.add_parser("real", help="Graph from real dataset")

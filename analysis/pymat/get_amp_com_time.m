@@ -5,6 +5,24 @@ load('data/iris.mat');
 %nGT = ~GT;
 %nGT(logical(eye(size(GT)))) = 0;
 %nGT = double(nGT);
+%nGT = double(nGT)
+
+% Fiorucci inverse
+%L = nGT;
+%aux = GT;
+%aux(logical(eye(size(aux)))) = 1;
+%aux = flipud(aux);
+%nGT = aux + L;
+
+% Star graph
+%nGT = zeros(size(GT));
+%nGT(:,1) = 1;
+%nGT(1,:) = 1;
+%nGT(1,1) = 0;
+% Creates "not"-GT and puts 0 on diagonal
+%nGT = ~GT;
+%nGT(logical(eye(size(GT)))) = 0;
+%nGT = double(nGT);
 %nGT = nGT*0.00001
 
 % Line graph
