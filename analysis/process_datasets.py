@@ -7,6 +7,78 @@ import sys
 sys.path.insert(0, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/misc')
 import noisyblockadjmat as nbam
 
+def create_graphs(kind, args):
+    
+    if kind != 'real':
+        internoise_lvl = args.internoise_lvl 
+        intranoise_lvl = args.intranoise_lvl
+        noise_val = 0
+        if args.random_noise:
+            modality = 'weighted'
+        else:
+            modality = 'constant'
+            noise_val = args.constant_noise
+
+        # Fixed
+        if kind == 'fixed':
+
+            cluster_size = args.cluster_size 
+            n_clusters = args.n_clusters
+            c_dimensions = [cluster_size, n_clusters]
+
+            NG  = nbam.generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val)
+            GT  = nbam.generate_matrix(cluster_size, n_clusters, 0, 0, 'constant', 0)
+
+            title = f'in-{internoise_lvl}-c-'
+            title += "x".join(str(e) for e in c_dimensions)
+
+            return NG, GT, title, cluster_size*n_clusters
+
+        # Custom
+        else:
+
+            c_dimensions = args.c_dimensions
+            c_dimensions = list(map(int, c_dimensions)) 
+            tot_dim = sum(c_dimensions) 
+
+            # TODO intranoise -i not implemented
+            NG  = nbam.custom_noisy_matrix(tot_dim, c_dimensions, internoise_lvl, noise_val)
+            GT  = nbam.custom_noisy_matrix(tot_dim, c_dimensions, 0, 0)
+
+            title = f'in-{internoise_lvl}-cs-'
+            title += "-".join(str(e) for e in c_dimensions)
+            return NG, GT, title, tot_dim 
+
+    # Real
+    else:
+        dataset = args.dataset 
+        if dataset == 'XPCA':
+            sigma = args.sigma 
+            to_remove = args.to_remove 
+            NG, GT, tot_dim = pd.get_XPCA_data(sigma, to_remove)
+            title = f'XPCA_dataset_{sigma:.3f}'
+            if args.dryrun:
+                plt.show(plt.imshow(NG))
+                plt.show(plt.imshow(GT))
+                sys.exit("Dryrun") # TODO
+            return NG, GT, title, tot_dim
+
+        elif dataset == 'GColi1':
+            NG, GT, tot_dim = pd.get_GColi1_data()
+            title = 'GColi1_dataset'
+            return NG, GT, title, tot_dim
+
+        elif dataset == 'UCI':
+            sigma = args.sigma 
+            name = args.UCI 
+            NG, GT, tot_dim = get_UCI_data(name, sigma)
+            title = f'UCI_{name}_dataset_sigma_{sigma:.10f}'
+
+            if args.dryrun:
+                plt.show(plt.imshow(NG))
+                plt.show(plt.imshow(GT))
+                sys.exit("Dryrun") # TODO
+            return NG, GT, title, tot_dim
 
 def graph_from_points(x, sigma, to_remove=0):
     """

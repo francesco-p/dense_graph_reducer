@@ -15,15 +15,15 @@ class SzemerediRegularityLemma:
     """The conditions used to check the regularity/irregularity of the pairs"""
 
     # main data structure
-    sim_mat = np.empty((0, 0))
+    sim_mat = np.empty((0, 0), dtype='float32')
     """The similarity matrix representing the graph (used only if is_weighted is set to True)"""
-    adj_mat = np.empty((0, 0))
+    adj_mat = np.empty((0, 0), dtype='int32')
     """The adjacency matrix representing the graph"""
-    reduced_sim_mat = np.empty((0, 0))
+    reduced_sim_mat = np.empty((0, 0), dtype='float32')
     """the resulting similarity matrix"""
-    classes = np.empty((0, 0))
+    classes = np.empty((0, 0), dtype='int32')
     """array with size equal to the number of nodes in the graph. Each element is set to the class whose node belongs"""
-    degrees = np.empty((0, 0))
+    degrees = np.empty((0, 0), dtype='int32')
     """array containing the indices of the nodes ordered by the degree"""
 
     # main parameters of the algorithm
@@ -89,16 +89,12 @@ class SzemerediRegularityLemma:
         """
         reconstructed_mat = np.zeros((self.N, self.N))
 
-        # IS IT CORRECT?
-        #r_nodes = self.classes == 1
         r_nodes = self.classes > 0
         reconstructed_mat[np.ix_(r_nodes, r_nodes)] = intracluster_weight 
-        #reconstructed_mat[np.ix_(r_nodes, r_nodes)] = thresh 
 
         for r in range(2, self.k + 1):
             r_nodes = self.classes == r
             reconstructed_mat[np.ix_(r_nodes, r_nodes)] = intracluster_weight
-            #reconstructed_mat[np.ix_(r_nodes, r_nodes)] = thresh
             for s in range(1, r):
                 if self.is_weighted:
                     cl_pair = WeightedClassesPair(self.sim_mat, self.adj_mat, self.classes, r, s, self.epsilon)
@@ -110,6 +106,7 @@ class SzemerediRegularityLemma:
                     reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = cl_pair.bip_density
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
+
 
     def check_pairs_regularity(self):
         """
@@ -225,5 +222,6 @@ class SzemerediRegularityLemma:
                     print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
                 return (False, self.k, None)
 
-        self.generate_reduced_sim_mat()
-        return (True, self.k, self.reduced_sim_mat)
+        #self.generate_reduced_sim_mat()
+        #return (True, self.k, self.reduced_sim_mat)
+        return (True, self.k, self.classes)
