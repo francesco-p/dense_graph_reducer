@@ -1,84 +1,7 @@
 import scipy.io as sp
-import math
 import numpy as np
-from numpy import genfromtxt
-import matplotlib.pyplot as plt
-import sys
-sys.path.insert(0, '/home/lakj/Documenti/university/thesis/code/dense_graph_reducer_forked/misc')
-import noisyblockadjmat as nbam
+import pandas as pd
 
-def create_graphs(kind, args):
-    
-    if kind != 'real':
-        internoise_lvl = args.internoise_lvl 
-        intranoise_lvl = args.intranoise_lvl
-        noise_val = 0
-        if args.random_noise:
-            modality = 'weighted'
-        else:
-            modality = 'constant'
-            noise_val = args.constant_noise
-
-        # Fixed
-        if kind == 'fixed':
-
-            cluster_size = args.cluster_size 
-            n_clusters = args.n_clusters
-            c_dimensions = [cluster_size, n_clusters]
-
-            NG  = nbam.generate_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val)
-            GT  = nbam.generate_matrix(cluster_size, n_clusters, 0, 0, 'constant', 0)
-
-            title = f'in-{internoise_lvl}-c-'
-            title += "x".join(str(e) for e in c_dimensions)
-
-            return NG, GT, title, cluster_size*n_clusters
-
-        # Custom
-        else:
-
-            c_dimensions = args.c_dimensions
-            c_dimensions = list(map(int, c_dimensions)) 
-            tot_dim = sum(c_dimensions) 
-
-            # TODO intranoise -i not implemented
-            NG  = nbam.custom_noisy_matrix(tot_dim, c_dimensions, internoise_lvl, noise_val)
-            GT  = nbam.custom_noisy_matrix(tot_dim, c_dimensions, 0, 0)
-
-            title = f'in-{internoise_lvl}-cs-'
-            title += "-".join(str(e) for e in c_dimensions)
-            return NG, GT, title, tot_dim 
-
-    # Real
-    else:
-        dataset = args.dataset 
-        if dataset == 'XPCA':
-            sigma = args.sigma 
-            to_remove = args.to_remove 
-            NG, GT, tot_dim = pd.get_XPCA_data(sigma, to_remove)
-            title = f'XPCA_dataset_{sigma:.3f}'
-            if args.dryrun:
-                plt.show(plt.imshow(NG))
-                plt.show(plt.imshow(GT))
-                sys.exit("Dryrun") # TODO
-            return NG, GT, title, tot_dim
-
-        elif dataset == 'GColi1':
-            NG, GT, tot_dim = pd.get_GColi1_data()
-            title = 'GColi1_dataset'
-            return NG, GT, title, tot_dim
-
-        elif dataset == 'UCI':
-            sigma = args.sigma 
-            name = args.UCI 
-            NG, GT, tot_dim = get_UCI_data(name, sigma)
-            title = f'UCI_{name}_dataset_sigma_{sigma:.10f}'
-
-            if args.dryrun:
-                plt.show(plt.imshow(NG))
-                plt.show(plt.imshow(GT))
-                sys.exit("Dryrun") # TODO
-            return NG, GT, title, tot_dim
 
 def graph_from_points(x, sigma, to_remove=0):
     """
@@ -91,7 +14,7 @@ def graph_from_points(x, sigma, to_remove=0):
 
     n = x.shape[0]
     n -= to_remove
-    w_graph = np.zeros((n,n))
+    w_graph = np.zeros((n,n), dtype='float32')
 
     for i in range(0,n):
         copy = np.tile(np.array(x[i, :]), (i+1, 1))
@@ -104,10 +27,39 @@ def graph_from_points(x, sigma, to_remove=0):
     return w_graph + w_graph.T
 
 
+def get_data(name, sigma):
+    """
+    Given a .csv features:label it returns the dataset modified with a gaussian kernel
+    name: the name of the dataset,it must be in the data folder
+    sigma: sigma of the gaussian kernel
+    """
+
+    df = pd.read_csv(f"data/{name}.csv", delimiter=',', header=None)
+    labels = df.iloc[:,-1].astype('category').cat.codes.values
+    features = df.values[:,:-1].astype('float32')
+
+    unq_labels, unq_counts = np.unique(labels, return_counts=True)
+     
+    n = unq_counts.sum()
+
+    NG = graph_from_points(features, sigma)
+    GT = custom_cluster_matrix(n, unq_counts, 0, 0)
+
+    return NG.astype('float32'), GT.astype('int32'), n 
+
+
+def get_GColi1_data():
+    
+    data = sp.loadmat("data/GCoil1.mat")
+    NG = data['GCoil1']
+    GT  = generate_matrix(72, 20, 0, 0, 'constant', 0)
+
+    return NG.astype('float32'), GT.astype('int32'), 70*20
+
+
 def get_XPCA_data(sigma, to_remove):
 
     c_dimensions = ['XPCA']
-
     data = sp.loadmat("data/XPCA.mat")
 
     arr_feature = data['X']
@@ -118,53 +70,109 @@ def get_XPCA_data(sigma, to_remove):
     c_dimensions = [1000]*int(tot_dim/1000)
     if tot_dim % 1000:
         c_dimensions.append(tot_dim % 1000)
-    GT = nbam.custom_noisy_matrix(tot_dim, c_dimensions, 0, 0)
+    GT = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0)
 
-    #plt.show(plt.imshow(NG))
-    #plt.show(plt.imshow(GT))
-
-    return NG, GT, tot_dim
+    return NG.astype('float32'), GT.astype('int32'), tot_dim
 
 
-def get_UCI_data(name, sigma):
+def synthetic_regular_partition(k, epsilon):
     """
-    Process UCI dataset in data/UCI_datasets folder
-    :param name: the name of the dataset
-    :param sigma: sigma of the kernel to be applied
+    Generates a synthetic regular partition.
+    :param k: the cardinality of the partition
+    :param epsilon: the epsilon parameter to calculate the number of irregular pairs
+    :return: a weighted symmetric graph
     """
-    arr_feature = genfromtxt(f"data/UCI_datasets/{name}_features", delimiter=',')
-    arr_labels = genfromtxt(f"data/UCI_datasets/{name}_labelled", delimiter=',', dtype=str)
 
-    arr_labels = arr_labels[:,-1]
+    # Generate a kxk matrix where each element is between (0,1]
+    mat = np.tril(1-np.random.random((k, k)), -1)
 
-    unq_labels = np.unique(arr_labels)
+    x = np.tril_indices_from(mat, -1)[0]
+    y = np.tril_indices_from(mat, -1)[1]
 
-    tot_dim = 0
-    c_dims = []
-    
-    for label in unq_labels:
-        len_label = len(np.where(arr_labels == label)[0]) 
-        tot_dim += len_label 
-        c_dims.append(len_label)
-    
-    NG = graph_from_points(arr_feature, sigma)
+    # Generate a random number between 0 and epsilon*k**2 (number of irregular pairs)
+    n_irr_pairs = round(np.random.uniform(0, epsilon*(k**2)))
 
-    GT = nbam.custom_noisy_matrix(tot_dim, c_dims, 0, 0)
+    # Select the indices of the irregular  pairs
+    irr_pairs = np.random.choice(len(x), n_irr_pairs)
 
-    #plt.show(plt.imshow(NG))
-    #plt.show(plt.imshow(GT))
+    mat[(x[irr_pairs],  y[irr_pairs])] = 0
 
-    return NG, GT, tot_dim 
-
-def get_GColi1_data():
-    
-    data = sp.loadmat("data/GCoil1.mat")
-    NG = data['GCoil1']
-    GT  = nbam.generate_matrix(72, 20, 0, 0, 'constant', 0)
-
-    #plt.show(plt.imshow(NG))
-    #plt.show(plt.imshow(GT))
-
-    return NG, GT, 70*20
+    return mat + mat.T
 
 
+def custom_cluster_matrix(mat_dim, dims, internoise_lvl, noise_val):
+    """
+    Custom noisy matrix
+    mat_dim : dimension of the whole graph
+    dims: list of cluster dimensions
+    internoise_lvl : level of noise between clusters
+    noise_lvl : value of the noise
+    """
+    if len(dims) > mat_dim:
+        sys.exit("You want more cluster than nodes???")
+        return 0
+
+    if sum(dims) != mat_dim:
+        sys.exit("The sum of clusters dimensions must be equal to the total number of nodes")
+        return 0
+
+    # TODO does not implement intranoise
+    mat = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
+    mat = np.multiply(mat, noise_val)
+    x = 0
+    for dim in dims:
+        mat[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1)
+        x += dim
+
+    return mat + mat.T
+
+
+def cluster_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val):
+    """
+    Generate a noisy adjacency matrix with noisy cluster over the diagonal. The computed matrix will have size = n_cluster * cluster_size
+
+    n_clusters: number of cluster
+    cluster_size: size of a single cluster
+    internoise_lvl: percentage of noise between the clusters (0.0 for no noise)
+    intranoise_lvl: percentage of noise within a cluster (0.0 for completely connected clusters)
+    modality: the nature of the noise. Currently the supported values are 'weighted' and 'constant'
+    noise_val: the constant value to represent noise, used in combination with mode='constant'
+
+    Returns the noisy block adjacency matrix
+    """
+
+    mat_size = cluster_size * n_clusters
+
+    # Interclass noise
+    if internoise_lvl != 0:
+        mat = np.tril(np.random.random((mat_size, mat_size)) < internoise_lvl, -1)
+        if modality == "weighted":
+            mat = np.multiply(mat, np.random.random((mat_size, mat_size)))
+        elif modality == "constant":
+            mat = np.multiply(mat, noise_val)
+        else:
+            sys.exit("incorrect modality")
+    else:
+        mat = np.zeros((mat_size, mat_size))
+
+    for i in range(1, n_clusters+1):
+        # Intraclass noise
+        cl = np.tril(np.ones((cluster_size, cluster_size)), -1)
+
+        if intranoise_lvl != 0:
+            noise = np.tril(np.random.random((cluster_size, cluster_size)) < intranoise_lvl, -1)
+
+            if modality == "weighted":
+                noise = np.multiply(noise, np.random.random((cluster_size, cluster_size)))
+            elif modality == "constant":
+                noise = np.multiply(noise, 1.0 - noise_val)
+            else:
+                sys.exit("incorrect modality")
+
+            cl = cl - noise
+
+        mat[((i - 1) * cluster_size):(i * cluster_size), ((i - 1) * cluster_size):(i * cluster_size)] = cl
+
+    mat = mat + mat.T
+
+    return mat

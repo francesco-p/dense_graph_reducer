@@ -72,7 +72,7 @@ class SzemerediRegularityLemma:
         generate the similarity matrix of the current classes
         :return sim_mat: the reduced similarity matrix
         """
-        self.reduced_sim_mat = np.zeros((self.k, self.k))
+        self.reduced_sim_mat = np.zeros((self.k, self.k), dtype='float32')
 
         for r in range(2, self.k + 1):
             for s in (range(1, r) if not self.drop_edges_between_irregular_pairs else self.regularity_list[r - 2]):
@@ -87,7 +87,7 @@ class SzemerediRegularityLemma:
         reconstruct a similarity matrix with size equals to the original one, from the reduced similarity matrix
         :param thresh: a threshold parameter to prune the edges of the graph
         """
-        reconstructed_mat = np.zeros((self.N, self.N))
+        reconstructed_mat = np.zeros((self.N, self.N), dtype='float32')
 
         r_nodes = self.classes > 0
         reconstructed_mat[np.ix_(r_nodes, r_nodes)] = intracluster_weight 

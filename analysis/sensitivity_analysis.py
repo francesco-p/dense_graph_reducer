@@ -9,15 +9,12 @@ author: francesco-p
 
 import numpy as np
 import matplotlib.pyplot as plt
-#import ipdb
+
+import process_datasets as pd
 
 import sys
 sys.path.insert(1, '../graph_reducer/')
 import szemeredi_lemma_builder as slb
-import noisyblockadjmat as nbam
-import process_datasets as pd
-import classes_pair as wcp
-
 
 
 class SensitivityAnalysis:
@@ -49,11 +46,19 @@ class SensitivityAnalysis:
         self.compression = 0.05
     
     def set_dset(self, dset):
+        """
+        Change dataset
+        """
         self.dset = dset
         self.NG = self.dset['NG']
         self.GT = self.dset['GT']
 
     def run_alg(self, epsilon):
+        """
+        Creates and run the szemeredi algorithm with a particular dataset
+        epsilon: the epsilon parameter of the algorithm
+        return: if the partition found is regular, its cardinality, and how the nodes are partitioned
+        """
         self.srla = slb.generate_szemeredi_reg_lemma_implementation(self.kind, 
                                                                     self.NG, 
                                                                     epsilon, 
@@ -114,6 +119,9 @@ class SensitivityAnalysis:
 
 
     def find_bounding_epsilons(self):
+        """
+        Finds the bounding epsilons and set up the range where to search
+        """
 
         if self.bounds:
             epsilon1 = self.bounds[0]
@@ -134,6 +142,10 @@ class SensitivityAnalysis:
 
 
     def find_partitions(self):
+        """
+        Start looking for partitions
+        return: a dictionary with key the cardinality of the partition, the corresponding epsilon and the classes reduced array
+        """
         self.k_e_c= {}
         for epsilon in self.epsilons:
             regular, k, classes = self.run_alg(epsilon)
@@ -144,6 +156,13 @@ class SensitivityAnalysis:
 
 
     def thresholds_analysis(self, classes, k, measure):
+        """
+        Start performing threshold analysis
+        classes: the reduced array
+        k: the cardinality of the patition
+        measure: the measure to use
+        return: the measures 
+        """
         self.measures = []
         for thresh in self.thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
@@ -153,6 +172,12 @@ class SensitivityAnalysis:
 
 
     def reconstruct_mat(self, thresh, classes, k):
+        """
+        Reconstruct the original matrix from a reduced one
+        thres: the edge threshold
+        classes: the reduced array
+        return: the measures 
+        """
         reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]))
         for r in range(2, k + 1):
             r_nodes = classes == r
@@ -172,6 +197,9 @@ class SensitivityAnalysis:
         return reconstructed_mat
 
     def save_data(self):
+        """
+        Serialize data to file
+        """
         # Save the bounds of the analysis
         with open("./imgs/bounds.txt", "a") as bounds_file:
             bounds_file.write(f"{title}_{epsilon1}_{epsilon2}\n")
