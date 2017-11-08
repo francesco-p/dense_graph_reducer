@@ -9,9 +9,7 @@ author: francesco-p
 
 import numpy as np
 import matplotlib.pyplot as plt
-
 import process_datasets as pd
-
 import sys
 sys.path.insert(1, '../graph_reducer/')
 import szemeredi_lemma_builder as slb
@@ -19,13 +17,12 @@ import szemeredi_lemma_builder as slb
 
 class SensitivityAnalysis:
 
-    def __init__(self, dset, bounds=None):
+    def __init__(self, dset):
 
         # NG GT
         self.set_dset(dset)
 
         # Find bounds parameters
-        self.bounds = bounds
         self.min_k = 2
         self.min_step = 0.00001
         self.tries = 20
@@ -44,7 +41,8 @@ class SensitivityAnalysis:
         self.iteration_by_iteration = False
         self.verbose = False
         self.compression = 0.05
-    
+
+
     def set_dset(self, dset):
         """
         Change dataset
@@ -52,6 +50,8 @@ class SensitivityAnalysis:
         self.dset = dset
         self.NG = self.dset['NG']
         self.GT = self.dset['GT']
+        self.bounds = list(self.dset['bounds'])
+
 
     def run_alg(self, epsilon):
         """
@@ -59,20 +59,19 @@ class SensitivityAnalysis:
         epsilon: the epsilon parameter of the algorithm
         return: if the partition found is regular, its cardinality, and how the nodes are partitioned
         """
-        self.srla = slb.generate_szemeredi_reg_lemma_implementation(self.kind, 
-                                                                    self.NG, 
-                                                                    epsilon, 
-                                                                    self.is_weighted, 
-                                                                    self.random_initialization, 
-                                                                    self.random_refinement, 
+        self.srla = slb.generate_szemeredi_reg_lemma_implementation(self.kind,
+                                                                    self.NG,
+                                                                    epsilon,
+                                                                    self.is_weighted,
+                                                                    self.random_initialization,
+                                                                    self.random_refinement,
                                                                     self.drop_edges_between_irregular_pairs)
-        regular, k, classes = self.srla.run(iteration_by_iteration=self.iteration_by_iteration, 
-                                                    verbose=self.verbose, 
+        regular, k, classes = self.srla.run(iteration_by_iteration=self.iteration_by_iteration,
+                                                    verbose=self.verbose,
                                                     compression_rate=self.compression)
         return regular, k, classes
 
 
-    
     def find_trivial_epsilon(self, epsilon1, epsilon2):
         """
         Performs binary search to find the best trivial epsilon candidate: the first epsilon for which k=2
@@ -84,7 +83,7 @@ class SensitivityAnalysis:
         else:
             epsilon_middle = epsilon1 + step
             print(f"|{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
-            regular, k, classes = self.run_alg(epsilon_middle) 
+            regular, k, classes = self.run_alg(epsilon_middle)
             print(f"{k} {regular}")
 
             if regular:
@@ -108,7 +107,7 @@ class SensitivityAnalysis:
         else:
             epsilon_middle = epsilon1 + step
             print(f"|{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
-            regular, k, classes = self.run_alg(epsilon_middle) 
+            regular, k, classes = self.run_alg(epsilon_middle)
             print(f"{k} {regular}")
             if regular:
                 del self.srla
@@ -122,7 +121,6 @@ class SensitivityAnalysis:
         """
         Finds the bounding epsilons and set up the range where to search
         """
-
         if self.bounds:
             epsilon1 = self.bounds[0]
             epsilon2 = self.bounds[1]
@@ -161,12 +159,13 @@ class SensitivityAnalysis:
         classes: the reduced array
         k: the cardinality of the patition
         measure: the measure to use
-        return: the measures 
+        return: the measures
         """
         self.measures = []
         for thresh in self.thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
             res = measure(self.GT, sze_rec)/(self.GT.shape[0])
+            print(f"    {res:.5f}")
             self.measures.append(res)
         return self.measures
 
@@ -176,14 +175,14 @@ class SensitivityAnalysis:
         Reconstruct the original matrix from a reduced one
         thres: the edge threshold
         classes: the reduced array
-        return: the measures 
+        return: the measures
         """
-        reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]))
+        reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]), dtype='float32')
+        adj_mat = (self.NG > 0.0).astype('float32')
         for r in range(2, k + 1):
             r_nodes = classes == r
             for s in range(1, r):
                 s_nodes = classes == s
-                adj_mat = (self.NG > 0.0).astype(float)
                 index_map = np.where(classes == r)[0]
                 index_map = np.vstack((index_map, np.where(classes == s)[0]))
                 bip_sim_mat = self.NG[np.ix_(index_map[0], index_map[1])]
@@ -196,6 +195,7 @@ class SensitivityAnalysis:
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
 
+
     def save_data(self):
         """
         Serialize data to file
@@ -206,7 +206,7 @@ class SensitivityAnalysis:
 
         # Adds NOISY GRAPH line
         ng_dist = L2_distance(GT, NG)/tot_dim
-        k_dist['NG'] = [ng_dist]*len(thresholds) 
+        k_dist['NG'] = [ng_dist]*len(thresholds)
 
         # Save a dictionary of the results (we can plot it directly with plot.py)
         name = f"./npy/{title}.npy"

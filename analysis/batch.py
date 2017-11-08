@@ -1,8 +1,18 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import ipdb
 import process_datasets as proc
 from sensitivity_analysis import SensitivityAnalysis
-import ipdb
+
+
+def search_dset(name, sigma):
+    path = "data/npz/"
+    for f in os.listdir(path):
+        if f == f"{name}_{sigma:.5f}.npz":
+            return np.load(path+f) 
+    return None
+
 
 
 def L2_distance(GT, NG):
@@ -15,29 +25,52 @@ def L2_distance(GT, NG):
 
     return accu**(1.0/2.0)
 
+
 # Retrieve data
-NG, GT, n = proc.get_data('ecoli', 0.475)
+#NG, GT, n = proc.get_data('ecoli', 0.475)
+name = 'ecoli'
+sigma = 0.475
 
-ipdb.set_trace()
+print("[+] Searching for existing .npz")
+data = search_dset(name, sigma)
+first_time = False
+if not data:
+    first_time = True
+    print("No data found: Generating data")
 
-data = {}
-data['NG'] = NG
-data['GT'] = GT
+    if name == 'XPCA':
+        NG, GT, n = proc.get_XPCA_data(sigma, 0)
+    else:
+        NG, GT, n = proc.get_data(name, sigma)
+
+    data = {}
+    data['NG'] = NG
+    data['GT'] = GT
+    data['bounds'] = []
+else:
+    print("[+] Found .npz")
 
 # Start analysis
 s = SensitivityAnalysis(data)
-s.find_bounding_epsilons()
-s.find_partitions()
-kec = s.find_partitions()
 
+print("[+] Finding bounding epsilon")
+s.find_bounding_epsilons()
+
+if first_time:
+    np.savez(f"data/npz/{name}_{sigma:.5f}.npz", NG=NG, GT=GT, bounds=s.bounds)
+    print("[+] Data saved")
+
+print("[+] Finding partitions")
+kec = s.find_partitions()
+print("[+] Performing threshold analysis")
 for k in kec.keys():
+    print(f"  k: {k}")
     classes = kec[k][1]
     dists = s.thresholds_analysis(classes, k, L2_distance)
-    print(dists)
 
     lab = f"k={k}"
     plt.plot(s.thresholds, dists, label=lab)
-    plt.title("Ecoli Sigma 1315")
+    plt.title(f"{name}_{sigma:.5f}")
     plt.ylabel('Distance')
     plt.xlabel('Reconstruction Threshold')
     plt.legend(loc='lower right')
@@ -51,9 +84,9 @@ plt.show()
 
 
 #def create_graphs(kind, args):
-#    
+#
 #    if kind != 'real':
-#        internoise_lvl = args.internoise_lvl 
+#        internoise_lvl = args.internoise_lvl
 #        intranoise_lvl = args.intranoise_lvl
 #        noise_val = 0
 #        if args.random_noise:
@@ -65,7 +98,7 @@ plt.show()
 #        # Fixed
 #        if kind == 'fixed':
 #
-#            cluster_size = args.cluster_size 
+#            cluster_size = args.cluster_size
 #            n_clusters = args.n_clusters
 #            c_dimensions = [cluster_size, n_clusters]
 #
@@ -81,8 +114,8 @@ plt.show()
 #        else:
 #
 #            c_dimensions = args.c_dimensions
-#            c_dimensions = list(map(int, c_dimensions)) 
-#            tot_dim = sum(c_dimensions) 
+#            c_dimensions = list(map(int, c_dimensions))
+#            tot_dim = sum(c_dimensions)
 #
 #            # TODO intranoise -i not implemented
 #            NG  = nbam.custom_noisy_matrix(tot_dim, c_dimensions, internoise_lvl, noise_val)
@@ -90,14 +123,14 @@ plt.show()
 #
 #            title = f'in-{internoise_lvl}-cs-'
 #            title += "-".join(str(e) for e in c_dimensions)
-#            return NG, GT, title, tot_dim 
+#            return NG, GT, title, tot_dim
 #
 #    # Real
 #    else:
-#        dataset = args.dataset 
+#        dataset = args.dataset
 #        if dataset == 'XPCA':
-#            sigma = args.sigma 
-#            to_remove = args.to_remove 
+#            sigma = args.sigma
+#            to_remove = args.to_remove
 #            NG, GT, tot_dim = pd.get_XPCA_data(sigma, to_remove)
 #            title = f'XPCA_dataset_{sigma:.3f}'
 #            if args.dryrun:
@@ -112,8 +145,8 @@ plt.show()
 #            return NG, GT, title, tot_dim
 #
 #        elif dataset == 'UCI':
-#            sigma = args.sigma 
-#            name = args.UCI 
+#            sigma = args.sigma
+#            name = args.UCI
 #            NG, GT, tot_dim = get_UCI_data(name, sigma)
 #            title = f'UCI_{name}_dataset_sigma_{sigma:.10f}'
 #
@@ -129,7 +162,7 @@ plt.show()
 #
 #    subparsers = parser.add_subparsers(title='Graph generation', description='Modality of the creation of the graphs', help='You must select one of between the three possibilities')
 #
-#    # Fixed graph generation 
+#    # Fixed graph generation
 #    fixed_p = subparsers.add_parser("fixed", help="Fixed generation of clusters")
 #    fixed_p.add_argument("-bounds", "-b", help="Two epsilon bound", nargs=2, type=float)
 #    fixed_p.add_argument("-cluster_size", "-s", help="Size of a single square cluster", type=int, default=1000)
@@ -142,7 +175,7 @@ plt.show()
 #    group.add_argument("-random_noise", help="Set uniform nature of noise (between 0 and 1)", action="store_true")
 #
 #
-#    # Custom graph generation 
+#    # Custom graph generation
 #    custom_p = subparsers.add_parser("custom", help="Custom generation of imbalanced clusters")
 #    custom_p.add_argument("-bounds", "-b", help="Two epsilon bound", nargs=2, type=float)
 #    custom_p.add_argument("-internoise_lvl", "-e", help="Percentage of noise between the clusters (0 for no noise) the noise weight is a Uniform(0,1) distribution", type=float, default=0.5)

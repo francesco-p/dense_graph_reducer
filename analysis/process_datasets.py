@@ -21,7 +21,7 @@ def graph_from_points(x, sigma, to_remove=0):
         difference = copy - x[0:i+1, :]
         column = np.exp(-sigma*(difference**2).sum(1))
 
-        #w_graph[0:i+1, i] = column 
+        #w_graph[0:i+1, i] = column
         w_graph[0:i, i] = column[:-1] # set diagonal to 0 the resulting graph is different
 
     return w_graph + w_graph.T
@@ -39,17 +39,17 @@ def get_data(name, sigma):
     features = df.values[:,:-1].astype('float32')
 
     unq_labels, unq_counts = np.unique(labels, return_counts=True)
-     
+
     n = unq_counts.sum()
 
     NG = graph_from_points(features, sigma)
     GT = custom_cluster_matrix(n, unq_counts, 0, 0)
 
-    return NG.astype('float32'), GT.astype('int32'), n 
+    return NG.astype('float32'), GT.astype('int32'), n
 
 
 def get_GColi1_data():
-    
+
     data = sp.loadmat("data/GCoil1.mat")
     NG = data['GCoil1']
     GT  = generate_matrix(72, 20, 0, 0, 'constant', 0)
