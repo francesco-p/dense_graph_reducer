@@ -10,9 +10,11 @@ author: francesco-p
 import numpy as np
 import matplotlib.pyplot as plt
 import process_datasets as pd
+from sklearn import metrics
 import sys
 sys.path.insert(1, '../graph_reducer/')
 import szemeredi_lemma_builder as slb
+
 
 
 class SensitivityAnalysis:
@@ -166,7 +168,7 @@ class SensitivityAnalysis:
         self.measures = []
         for thresh in self.thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
-            res = measure(self.GT, sze_rec)
+            res = measure(sze_rec)
             print(f"    {res:.5f}")
             self.measures.append(res)
         return self.measures
@@ -197,6 +199,50 @@ class SensitivityAnalysis:
                     reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
+
+
+    #################
+    #### Metrics ####
+    #################
+
+    def knn_voting_system(self, graph):
+        """
+        Implements knn voting system to calculate if the labeling is correct.
+        :param graph: graph
+        :returns: adjusted random score
+        """
+        n = len(self.labels) 
+        k = 9
+        candidates = np.zeros(n, dtype='int16')
+        i = 0
+        for row in graph:
+            max_k_idxs = row.argsort()[-k:]
+            aux = row[max_k_idxs] > 0
+            k_indices = max_k_idxs[aux]
+
+            if len(k_indices) == 0:
+                k_indices = row.argsort()[-1:]
+
+            #candidate_lbl = np.bincount(self.labels[k_indices].astype(int)).argmax()
+            candidate_lbl = np.bincount(self.labels[k_indices]).argmax()
+            candidates[i] = candidate_lbl
+            i += 1
+
+        ars = metrics.adjusted_rand_score(self.labels, candidates)
+
+        return ars
+
+
+    def L2_distance(self, graph):
+        """
+        Compute the L2 distance between two matrices
+        np.linalg.norm(a-b)
+        """
+        diff = np.subtract(self.GT, graph)
+        diff = np.square(diff)
+        accu = diff.sum()
+
+        return accu**(1.0/2.0)
 
 
 
