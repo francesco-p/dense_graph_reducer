@@ -46,11 +46,13 @@ class SensitivityAnalysis:
     def set_dset(self, dset):
         """
         Change dataset
+        :param dset: the new dictionary hoding NG GT and the bounds
         """
         self.dset = dset
         self.NG = self.dset['NG']
         self.GT = self.dset['GT']
-        self.bounds = list(self.dset['bounds'])
+        self.labels = self.dset['labels']
+        self.bounds = list(self.dset['bounds']) # to pass the test in find bounding epsilons
 
 
     def run_alg(self, epsilon):
@@ -82,7 +84,7 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            print(f"|{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
+            print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
             regular, k, classes = self.run_alg(epsilon_middle)
             print(f"{k} {regular}")
 
@@ -106,7 +108,7 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            print(f"|{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
+            print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
             regular, k, classes = self.run_alg(epsilon_middle)
             print(f"{k} {regular}")
             if regular:
@@ -125,12 +127,12 @@ class SensitivityAnalysis:
             epsilon1 = self.bounds[0]
             epsilon2 = self.bounds[1]
         else:
-            print("Finding trivial epsilon...")
+            print("     Finding trivial epsilon...")
             epsilon2 = self.find_trivial_epsilon(0, 1)
-            print(f"Trivial epsilon candidate: {epsilon2:.6f}")
-            print("Finding edge epsilon...")
+            print(f"    Trivial epsilon candidate: {epsilon2:.6f}")
+            print("    Finding edge epsilon...")
             epsilon1 = self.find_edge_epsilon(0, epsilon2)
-            print(f"Edge epsilon candidate: {epsilon1:.6f}")
+            print(f"    Edge epsilon candidate: {epsilon1:.6f}")
         self.bounds = [epsilon1, epsilon2]
         self.epsilons = [epsilon1]
         # Try self.tries different epsilons inside the bounds
@@ -147,7 +149,7 @@ class SensitivityAnalysis:
         self.k_e_c= {}
         for epsilon in self.epsilons:
             regular, k, classes = self.run_alg(epsilon)
-            print(f"{epsilon:.6f} {k} {regular}")
+            print(f"    {epsilon:.6f} {k} {regular}")
             if (k not in self.k_e_c) and regular and k!=2:
                 self.k_e_c[k] = (epsilon, classes)
         return self.k_e_c
@@ -155,16 +157,16 @@ class SensitivityAnalysis:
 
     def thresholds_analysis(self, classes, k, measure):
         """
-        Start performing threshold analysis
-        classes: the reduced array
-        k: the cardinality of the patition
-        measure: the measure to use
-        return: the measures
+        Start performing threshold analysis with a given measure
+        :param classes: the reduced array
+        :param k: the cardinality of the patition
+        :param measure: the measure to use
+        :return: the measures
         """
         self.measures = []
         for thresh in self.thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
-            res = measure(self.GT, sze_rec)/(self.GT.shape[0])
+            res = measure(self.GT, sze_rec)
             print(f"    {res:.5f}")
             self.measures.append(res)
         return self.measures
@@ -172,12 +174,13 @@ class SensitivityAnalysis:
 
     def reconstruct_mat(self, thresh, classes, k):
         """
-        Reconstruct the original matrix from a reduced one
-        thres: the edge threshold
-        classes: the reduced array
-        return: the measures
+        Reconstruct the original matrix from a reduced one.
+        :param thres: the edge threshold if the density between two pairs is over it we put an edge
+        :param classes: the reduced graph expressed as an array
+        :return: a numpy matrix of the size of GT 
         """
         reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]), dtype='float32')
+        # TODO Is it always a complete graph????
         adj_mat = (self.NG > 0.0).astype('float32')
         for r in range(2, k + 1):
             r_nodes = classes == r
@@ -195,35 +198,5 @@ class SensitivityAnalysis:
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
 
-
-    def save_data(self):
-        """
-        Serialize data to file
-        """
-        # Save the bounds of the analysis
-        with open("./imgs/bounds.txt", "a") as bounds_file:
-            bounds_file.write(f"{title}_{epsilon1}_{epsilon2}\n")
-
-        # Adds NOISY GRAPH line
-        ng_dist = L2_distance(GT, NG)/tot_dim
-        k_dist['NG'] = [ng_dist]*len(thresholds)
-
-        # Save a dictionary of the results (we can plot it directly with plot.py)
-        name = f"./npy/{title}.npy"
-        np.save(name , k_dist)
-
-        # Generate the plot
-        for k in k_dist.keys():
-            lab = f"k={k}"
-            plt.plot(thresholds, k_dist[k], label=lab)
-        plt.title(f"{title}")
-        plt.ylabel('Distance')
-        plt.xlabel('Reconstruction Threshold')
-        plt.legend(loc='lower right')
-        plt.savefig(f"./imgs/{title}.png")
-
-        # Controls --plot parameter
-        if args.plot:
-            plt.show()
 
 

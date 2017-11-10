@@ -1,6 +1,8 @@
 import scipy.io as sp
 import numpy as np
+import ipdb
 import pandas as pd
+
 
 
 def graph_from_points(x, sigma, to_remove=0):
@@ -30,8 +32,8 @@ def graph_from_points(x, sigma, to_remove=0):
 def get_data(name, sigma):
     """
     Given a .csv features:label it returns the dataset modified with a gaussian kernel
-    name: the name of the dataset,it must be in the data folder
-    sigma: sigma of the gaussian kernel
+    :param name: the name of the dataset,it must be in the data folder
+    :param sigma: sigma of the gaussian kernel
     """
 
     df = pd.read_csv(f"data/{name}.csv", delimiter=',', header=None)
@@ -39,22 +41,18 @@ def get_data(name, sigma):
     features = df.values[:,:-1].astype('float32')
 
     unq_labels, unq_counts = np.unique(labels, return_counts=True)
-
-    n = unq_counts.sum()
-
+    
     NG = graph_from_points(features, sigma)
-    GT = custom_cluster_matrix(n, unq_counts, 0, 0)
+    GT = custom_cluster_matrix(len(labels), unq_counts, 0, 0)
 
-    return NG.astype('float32'), GT.astype('int32'), n
+    return NG.astype('float32'), GT.astype('int32'), labels
 
 
 def get_GColi1_data():
-
     data = sp.loadmat("data/GCoil1.mat")
     NG = data['GCoil1']
     GT  = generate_matrix(72, 20, 0, 0, 'constant', 0)
-
-    return NG.astype('float32'), GT.astype('int32'), 70*20
+    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array([x for x in range(0,20)]), 72)
 
 
 def get_XPCA_data(sigma, to_remove):
@@ -72,7 +70,7 @@ def get_XPCA_data(sigma, to_remove):
         c_dimensions.append(tot_dim % 1000)
     GT = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0)
 
-    return NG.astype('float32'), GT.astype('int32'), tot_dim
+    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array([x for x in range(0,10)]), 1000) 
 
 
 def synthetic_regular_partition(k, epsilon):
@@ -103,10 +101,10 @@ def synthetic_regular_partition(k, epsilon):
 def custom_cluster_matrix(mat_dim, dims, internoise_lvl, noise_val):
     """
     Custom noisy matrix
-    mat_dim : dimension of the whole graph
-    dims: list of cluster dimensions
-    internoise_lvl : level of noise between clusters
-    noise_lvl : value of the noise
+    :param mat_dim : dimension of the whole graph
+    :param dims: list of cluster dimensions
+    :param internoise_lvl : level of noise between clusters
+    :param noise_lvl : value of the noise
     """
     if len(dims) > mat_dim:
         sys.exit("You want more cluster than nodes???")
@@ -131,14 +129,14 @@ def cluster_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, mod
     """
     Generate a noisy adjacency matrix with noisy cluster over the diagonal. The computed matrix will have size = n_cluster * cluster_size
 
-    n_clusters: number of cluster
-    cluster_size: size of a single cluster
-    internoise_lvl: percentage of noise between the clusters (0.0 for no noise)
-    intranoise_lvl: percentage of noise within a cluster (0.0 for completely connected clusters)
-    modality: the nature of the noise. Currently the supported values are 'weighted' and 'constant'
-    noise_val: the constant value to represent noise, used in combination with mode='constant'
+    :param n_clusters: number of cluster
+    :param cluster_size: size of a single cluster
+    :param internoise_lvl: percentage of noise between the clusters (0.0 for no noise)
+    :param intranoise_lvl: percentage of noise within a cluster (0.0 for completely connected clusters)
+    :param modality: the nature of the noise. Currently the supported values are 'weighted' and 'constant'
+    :param noise_val: the constant value to represent noise, used in combination with mode='constant'
 
-    Returns the noisy block adjacency matrix
+    :return: the noisy block adjacency matrix
     """
 
     mat_size = cluster_size * n_clusters
@@ -176,3 +174,4 @@ def cluster_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, mod
     mat = mat + mat.T
 
     return mat
+

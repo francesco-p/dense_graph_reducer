@@ -2,7 +2,7 @@ import numpy as np
 
 
 class ClassesPair:
-    bip_adj_mat = np.empty((0, 0), dtype='int32')
+    bip_adj_mat = np.empty((0, 0), dtype='int8')
     """The bipartite adjacency matrix. Given a bipartite graph with classes r and s, the rows of this matrix represent
        the nodes in r, while the columns the nodes in s"""
     r = s = -1
@@ -115,7 +115,7 @@ class WeightedClassesPair:
     bip_sim_mat = np.empty((0, 0), dtype='float32')
     """The bipartite similarity matrix. Given a bipartite graph with classes r and s, the rows of this matrix represent
        the nodes in r, while the columns the nodes in s."""
-    bip_adj_mat = np.empty((0, 0), dtype='int32')
+    bip_adj_mat = np.empty((0, 0), dtype='int8')
     """The bipartite adjacency matrix. Given a bipartite graph with classes r and s, the rows of this matrix represent
        the nodes in r, while the columns the nodes in s"""
     r = s = -1

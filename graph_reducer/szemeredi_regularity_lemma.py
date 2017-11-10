@@ -17,13 +17,13 @@ class SzemerediRegularityLemma:
     # main data structure
     sim_mat = np.empty((0, 0), dtype='float32')
     """The similarity matrix representing the graph (used only if is_weighted is set to True)"""
-    adj_mat = np.empty((0, 0), dtype='int32')
+    adj_mat = np.empty((0, 0), dtype='int16')
     """The adjacency matrix representing the graph"""
     reduced_sim_mat = np.empty((0, 0), dtype='float32')
     """the resulting similarity matrix"""
-    classes = np.empty((0, 0), dtype='int32')
+    classes = np.empty((0, 0), dtype='int16')
     """array with size equal to the number of nodes in the graph. Each element is set to the class whose node belongs"""
-    degrees = np.empty((0, 0), dtype='int32')
+    degrees = np.empty((0, 0), dtype='int16')
     """array containing the indices of the nodes ordered by the degree"""
 
     # main parameters of the algorithm

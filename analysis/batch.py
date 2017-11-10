@@ -1,18 +1,57 @@
+"""
+UTF-8
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import ipdb
 import process_datasets as proc
 from sensitivity_analysis import SensitivityAnalysis
+import putils as pu
 
 
 def search_dset(name, sigma):
+    """
+    Search for a .npz file into data/ folder then if exists it returns the dictionary with NG, GT, bounds
+    :param name: of the dataset
+    :param sigma: sigma of the gaussian kernel
+    :returns: None if no file or the dictionary
+    """
     path = "data/npz/"
     for f in os.listdir(path):
         if f == f"{name}_{sigma:.5f}.npz":
-            return np.load(path+f) 
+            return np.load(path+f)
     return None
 
+
+def knn_voting_system(graph, n, ind_vector, k):
+    """
+    Implements knn voting system to calculate if the labeling is correct.
+    :param graph: graph
+    :param n: length of the n
+    :param ind_vector: indicator vector, the labels of each row
+    :param k: the threshold
+    :returns: adjusted random score
+    """
+    labels = np.zeros(n)
+    i = 0
+    for row in graph:
+        max_k_idxs = row.argsort()[-k:]
+        aux = row[max_k_idxs] > 0
+        k_indices = max_k_idxs[aux]
+
+        if len(k_indices) == 0:
+            k_indices = row.argsort()[-1:]
+
+        #candidate_lbl = np.bincount(ind_vector[k_indices].astype(int)).argmax()
+        candidate_lbl = np.bincount(ind_vector[k_indices]).argmax()
+        labels[i] = candidate_lbl
+        i += 1
+
+    ars = metrics.adjusted_rand_score(ind_vector, labels)
+
+    return ars
 
 
 def L2_distance(GT, NG):
@@ -27,7 +66,6 @@ def L2_distance(GT, NG):
 
 
 # Retrieve data
-#NG, GT, n = proc.get_data('ecoli', 0.475)
 name = 'ecoli'
 sigma = 0.475
 
@@ -36,17 +74,21 @@ data = search_dset(name, sigma)
 first_time = False
 if not data:
     first_time = True
-    print("No data found: Generating data")
+    print("    No data found: Generating data")
 
     if name == 'XPCA':
-        NG, GT, n = proc.get_XPCA_data(sigma, 0)
+        NG, GT, labels = proc.get_XPCA_data(sigma, 0)
+    elif name == 'GColi1':
+        NG, GT, labels = proc.get_GColi1_data()
     else:
-        NG, GT, n = proc.get_data(name, sigma)
+        NG, GT, labels = proc.get_data(name, sigma)
 
     data = {}
     data['NG'] = NG
     data['GT'] = GT
     data['bounds'] = []
+    data['labels'] = labels
+    print("    Done!")
 else:
     print("[+] Found .npz")
 
@@ -57,7 +99,7 @@ print("[+] Finding bounding epsilon")
 s.find_bounding_epsilons()
 
 if first_time:
-    np.savez(f"data/npz/{name}_{sigma:.5f}.npz", NG=NG, GT=GT, bounds=s.bounds)
+    np.savez(f"data/npz/{name}_{sigma:.5f}.npz", NG=NG, GT=GT, bounds=s.bounds, labels=labels)
     print("[+] Data saved")
 
 print("[+] Finding partitions")
@@ -79,9 +121,35 @@ for k in kec.keys():
 plt.show()
 
 
-
-
-
+#    def save_data(self):
+#        """
+#        Serialize data to file
+#        """
+#        # Save the bounds of the analysis
+#        with open("./imgs/bounds.txt", "a") as bounds_file:
+#            bounds_file.write(f"{title}_{epsilon1}_{epsilon2}\n")
+#
+#        # Adds NOISY GRAPH line
+#        ng_dist = L2_distance(GT, NG)/tot_dim
+#        k_dist['NG'] = [ng_dist]*len(thresholds)
+#
+#        # Save a dictionary of the results (we can plot it directly with plot.py)
+#        name = f"./npy/{title}.npy"
+#        np.save(name , k_dist)
+#
+#        # Generate the plot
+#        for k in k_dist.keys():
+#            lab = f"k={k}"
+#            plt.plot(thresholds, k_dist[k], label=lab)
+#        plt.title(f"{title}")
+#        plt.ylabel('Distance')
+#        plt.xlabel('Reconstruction Threshold')
+#        plt.legend(loc='lower right')
+#        plt.savefig(f"./imgs/{title}.png")
+#
+#        # Controls --plot parameter
+#        if args.plot:
+#            plt.show()
 
 #def create_graphs(kind, args):
 #

@@ -21,12 +21,12 @@ def get_s_r_degrees(self,s,r):
     s_degs = r_columns[s_indices, :].sum(1)     # Get the degrees of s w.r.t. the elements of r
     r_degs = s_columns[r_indices, :].sum(1)     
 
-    s_r_degs = np.zeros(len(self.degrees))      
+    s_r_degs = np.zeros(len(self.degrees), dtype='int16')      
 
     s_r_degs[s_indices] = s_degs                # Put the degree of s the indices of s  
     s_r_degs[r_indices] = r_degs
     
-    return s_r_degs.astype(int)
+    return s_r_degs
 
 
 
