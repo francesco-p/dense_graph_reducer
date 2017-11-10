@@ -41,7 +41,7 @@ def get_data(name, sigma):
     features = df.values[:,:-1].astype('float32')
 
     unq_labels, unq_counts = np.unique(labels, return_counts=True)
-    
+
     NG = graph_from_points(features, sigma)
     GT = custom_cluster_matrix(len(labels), unq_counts, 0, 0)
 
@@ -70,7 +70,7 @@ def get_XPCA_data(sigma, to_remove):
         c_dimensions.append(tot_dim % 1000)
     GT = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0)
 
-    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array([x for x in range(0,10)]), 1000) 
+    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array([x for x in range(0,10)]), 1000)
 
 
 def synthetic_regular_partition(k, epsilon):

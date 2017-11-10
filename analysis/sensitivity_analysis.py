@@ -177,7 +177,7 @@ class SensitivityAnalysis:
         Reconstruct the original matrix from a reduced one.
         :param thres: the edge threshold if the density between two pairs is over it we put an edge
         :param classes: the reduced graph expressed as an array
-        :return: a numpy matrix of the size of GT 
+        :return: a numpy matrix of the size of GT
         """
         reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]), dtype='float32')
         # TODO Is it always a complete graph????
