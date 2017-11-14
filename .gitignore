@@ -1,7 +1,7 @@
-imgs/
-data/
+imgs/*
+unused_datasets/
+.npz
 putils.py
-pymat/
 
 
 
