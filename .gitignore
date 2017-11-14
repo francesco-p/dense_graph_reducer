@@ -1,7 +1,5 @@
-unused_datasets/
-imgs/*/
-unused_datasets/*
-npz/*.npz
+imgs/
+data/
 putils.py
 
 
