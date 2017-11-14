@@ -2,6 +2,7 @@ imgs/
 data/
 putils.py
 pymat/
+*.vim
 
 
 
