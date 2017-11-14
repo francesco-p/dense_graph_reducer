@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import sys
+import ipdb
 
 
 def randoramized(self):
@@ -10,25 +11,27 @@ def randoramized(self):
     """
     pass
 
+
 def get_s_r_degrees(self,s,r):
-
-    s_indices = np.where(self.classes == s)[0]  # Gets the indices of elements which are part of class s
-    r_indices = np.where(self.classes == r)[0]
-
-    s_columns = self.adj_mat[:, s_indices]      # Isolate the columns the adj_mat of the nodes of class s
-    r_columns = self.adj_mat[:, r_indices]
-
-    s_degs = r_columns[s_indices, :].sum(1)     # Get the degrees of s w.r.t. the elements of r
-    r_degs = s_columns[r_indices, :].sum(1)
+    """
+    Given two classes it returns a degree vector (indicator vector) where the degrees 
+    have been calculated with respecto to each other set.
+    :param s: int, class s
+    :param r: int, class r
+    :returns: np.array, degree vector
+    """
 
     s_r_degs = np.zeros(len(self.degrees), dtype='int16')
 
-    s_r_degs[s_indices] = s_degs                # Put the degree of s the indices of s
-    s_r_degs[r_indices] = r_degs
+    # Gets the indices of elements which are part of class s, then r
+    s_indices = np.where(self.classes == s)[0]
+    r_indices = np.where(self.classes == r)[0]
+
+    # Calculates the degree and assigns it
+    s_r_degs[s_indices] = self.adj_mat[np.ix_(s_indices, r_indices)].sum(1)
+    s_r_degs[r_indices] = self.adj_mat[np.ix_(r_indices, s_indices)].sum(1)
 
     return s_r_degs
-
-
 
 
 
@@ -37,7 +40,6 @@ def degree_based(self):
     perform step 4 of Alon algorithm, performing the refinement of the pairs, processing nodes according to their degree. Some heuristic is applied in order to
     speed up the process
     """
-
     to_be_refined = list(range(1, self.k + 1))
     irregular_r_indices = []
     is_classes_cardinality_odd = self.classes_cardinality % 2 == 1
@@ -57,7 +59,7 @@ def degree_based(self):
             to_be_refined.remove(chosen)
             irregular_r_indices = []
 
-            # Fix degree
+            # Degrees wrt to each other class
             s_r_degs = get_s_r_degrees(self, s, chosen)
 
             # i = 0 for r, i = 1 for s
@@ -66,8 +68,7 @@ def degree_based(self):
                 compl_length = len(self.certs_compls_list[chosen - 2][s - 1][1][i])
 
                 greater_set_ind = np.argmax([cert_length, compl_length])
-                lesser_set_ind = np.argmin(
-                    [cert_length, compl_length]) if cert_length != compl_length else 1 - greater_set_ind
+                lesser_set_ind = np.argmin([cert_length, compl_length]) if cert_length != compl_length else 1 - greater_set_ind
 
                 greater_set = self.certs_compls_list[chosen - 2][s - 1][greater_set_ind][i]
                 lesser_set = self.certs_compls_list[chosen - 2][s - 1][lesser_set_ind][i]
@@ -83,8 +84,9 @@ def degree_based(self):
                 self.classes[difference_nodes_ordered_by_degree] = 0
         else:
             self.k += 1
-            #s_indices_ordered_by_degree = sorted(list(np.where(self.classes == s)[0]), key=lambda el: np.where(self.degrees == el)[0], reverse=True)
-            s_indices_ordered_by_degree = sorted(list(np.where(self.classes == s)[0]), key=lambda el: s_r_degs[el], reverse=True)
+            #  TODO: cannot compute the r_s_degs since the candidate does not have any e-regular pair  <14-11-17, lakj>
+            s_indices_ordered_by_degree = sorted(list(np.where(self.classes == s)[0]), key=lambda el: np.where(self.degrees == el)[0], reverse=True)
+            #s_indices_ordered_by_degree = sorted(list(np.where(self.classes == s)[0]), key=lambda el: s_r_degs[el], reverse=True)
 
             if is_classes_cardinality_odd:
                 self.classes[s_indices_ordered_by_degree.pop(0)] = 0

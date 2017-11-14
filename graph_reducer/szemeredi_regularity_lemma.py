@@ -17,7 +17,7 @@ class SzemerediRegularityLemma:
     # main data structure
     sim_mat = np.empty((0, 0), dtype='float32')
     """The similarity matrix representing the graph (used only if is_weighted is set to True)"""
-    adj_mat = np.empty((0, 0), dtype='int16')
+    adj_mat = np.empty((0, 0), dtype='float32')
     """The adjacency matrix representing the graph"""
     reduced_sim_mat = np.empty((0, 0), dtype='float32')
     """the resulting similarity matrix"""
@@ -58,7 +58,7 @@ class SzemerediRegularityLemma:
     def __init__(self, sim_mat, epsilon, is_weighted, drop_edges_between_irregular_pairs):
         if is_weighted:
             self.sim_mat = sim_mat
-        self.adj_mat = (sim_mat > 0.0).astype(float)
+        self.adj_mat = (sim_mat > 0.0).astype('float32')
         self.epsilon = epsilon
         self.N = self.adj_mat.shape[0]
         self.degrees = np.argsort(self.adj_mat.sum(0))

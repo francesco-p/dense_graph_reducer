@@ -1,15 +1,17 @@
 """
-UTF-8
-author: francesco-p
-
-1. numpy array 32 bit
-2. refactor reconstruction matrix
-
+File: sensitivity_analysis.py
+Author: francesco-p (lakj)
+Email: 839220@stud.unive.it
+Github: https://github.com/francesco-p
+Description: This class performs a sensitivity analysis of the Szemeredi algorithm
+Coding: UTF-8
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matlab.engine
 import process_datasets as pd
+import ipdb
 from sklearn import metrics
 import sys
 sys.path.insert(1, '../graph_reducer/')
@@ -28,7 +30,6 @@ class SensitivityAnalysis:
         self.min_k = 2
         self.min_step = 0.00001
         self.tries = 20
-        self.thresholds = np.arange(0, 1.05, 0.05)
 
 
         # SZE algorithm parameters
@@ -43,6 +44,9 @@ class SensitivityAnalysis:
         self.iteration_by_iteration = False
         self.verbose = False
         self.compression = 0.05
+
+        # Matlab eng
+        self.eng = None
 
 
     def set_dset(self, dset):
@@ -60,8 +64,9 @@ class SensitivityAnalysis:
     def run_alg(self, epsilon):
         """
         Creates and run the szemeredi algorithm with a particular dataset
-        epsilon: the epsilon parameter of the algorithm
-        return: if the partition found is regular, its cardinality, and how the nodes are partitioned
+        if the partition found is regular, its cardinality, and how the nodes are partitioned
+        :param epsilon: float, the epsilon parameter of the algorithm
+        :returns: (bool, int, np.array)
         """
         self.srla = slb.generate_szemeredi_reg_lemma_implementation(self.kind,
                                                                     self.NG,
@@ -78,8 +83,10 @@ class SensitivityAnalysis:
 
     def find_trivial_epsilon(self, epsilon1, epsilon2):
         """
-        Performs binary search to find the best trivial epsilon candidate: the first epsilon for which k=2
+        Performs binary search to find the best trivial epsilon candidate:
+        the first epsilon for which k=2
         del statements are essential to free unused memory
+        :returns: float epsilon
         """
         step = (epsilon2 - epsilon1)/2.0
         if step < self.min_step:
@@ -104,7 +111,12 @@ class SensitivityAnalysis:
                 del self.srla
                 return self.find_trivial_epsilon(epsilon_middle, epsilon2)
 
+
     def find_edge_epsilon(self, epsilon1, epsilon2):
+        """
+        Finds the first epsilon for which we have a regular partition.
+        :returns: float epsilon
+        """ 
         step = (epsilon2 - epsilon1)/2.0
         if step < self.min_step:
             return epsilon2
@@ -121,9 +133,10 @@ class SensitivityAnalysis:
                 return self.find_edge_epsilon(epsilon_middle, epsilon2)
 
 
-    def find_bounding_epsilons(self):
+    def find_bounds(self):
         """
         Finds the bounding epsilons and set up the range where to search
+        :returns: the two bounds found
         """
         if self.bounds:
             epsilon1 = self.bounds[0]
@@ -142,11 +155,13 @@ class SensitivityAnalysis:
         for i in range(1, int(self.tries)+1):
             self.epsilons.append(epsilon1 + (i*offs))
 
+        return self.bounds
+
 
     def find_partitions(self):
         """
         Start looking for partitions
-        return: a dictionary with key the cardinality of the partition, the corresponding epsilon and the classes reduced array
+        :returns: a dictionary with the cardinality of the partition, the corresponding epsilon and the classes reduced array
         """
         self.k_e_c= {}
         for epsilon in self.epsilons:
@@ -157,16 +172,16 @@ class SensitivityAnalysis:
         return self.k_e_c
 
 
-    def thresholds_analysis(self, classes, k, measure):
+    def thresholds_analysis(self, classes, k, thresholds, measure):
         """
         Start performing threshold analysis with a given measure
         :param classes: the reduced array
         :param k: the cardinality of the patition
         :param measure: the measure to use
-        :return: the measures
+        :returns: the measures calculated with sze_rec
         """
         self.measures = []
-        for thresh in self.thresholds:
+        for thresh in thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
             res = measure(sze_rec)
             print(f"    {res:.5f}")
@@ -205,13 +220,13 @@ class SensitivityAnalysis:
     #### Metrics ####
     #################
 
-    def knn_voting_system(self, graph):
+    def KVS_metric(self, graph):
         """
-        Implements knn voting system to calculate if the labeling is correct.
-        :param graph: graph
+        Implements Knn Voting System to calculate if the labeling is correct.
+        :param graph: reconstructed graph
         :returns: adjusted random score
         """
-        n = len(self.labels) 
+        n = len(self.labels)
         k = 9
         candidates = np.zeros(n, dtype='int16')
         i = 0
@@ -233,16 +248,28 @@ class SensitivityAnalysis:
         return ars
 
 
-    def L2_distance(self, graph):
+    def L2_metric(self, graph):
         """
-        Compute the L2 distance between two matrices
-        np.linalg.norm(a-b)
+        Compute the normalized L2 distance between two matrices
+        :param graph: np.array, reconstructed graph
+        :returns: float, L2 norm
         """
-        diff = np.subtract(self.GT, graph)
-        diff = np.square(diff)
-        accu = diff.sum()
+        return np.linalg.norm(self.GT-graph)/self.GT.shape[0]
 
-        return accu**(1.0/2.0)
+    def ACT_metric(self, graph):
+        """
+        Compute Amplitude Commute Time with a Matlab engine request, it does not
+        apply the Gaussian Kernel
+        :param graph: reconstructed graph
+        :returns: L2 distance between GT_t and abs(NG_t-1)
+        """
+        if not self.eng:
+            print("[+] Starting Matlab engine ...")
+            self.eng = matlab.engine.start_matlab()
 
+        mat_GT = matlab.double(self.GT.tolist())
+        mat_NG = matlab.double(graph.tolist())
+        res = self.eng.get_ACT(mat_NG, mat_GT)
 
+        return res
 

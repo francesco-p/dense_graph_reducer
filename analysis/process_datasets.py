@@ -34,6 +34,7 @@ def get_data(name, sigma):
     Given a .csv features:label it returns the dataset modified with a gaussian kernel
     :param name: the name of the dataset,it must be in the data folder
     :param sigma: sigma of the gaussian kernel
+    :return: NG, GT, labels
     """
 
     df = pd.read_csv(f"data/{name}.csv", delimiter=',', header=None)

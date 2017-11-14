@@ -1,5 +1,7 @@
 """
 UTF-8
+dsets = [("column3C", 0.0004), ("ecoli", 0.475), ("ionosphere", 0.12), ("iris", 0.02), ("userknowledge", 0.42), ("spect-singleproton", 1.5)]
+worst = ["indian-liver", "pop-failures", "spect-singleproton", "spect-test"]
 """
 
 import matplotlib.pyplot as plt
@@ -9,10 +11,9 @@ import os
 import ipdb
 import process_datasets as proc
 from sensitivity_analysis import SensitivityAnalysis
-import putils as pu
 
 
-def search_dset(dataset, sigma):
+def search_dset(filename):
     """
     Search for a .npz file into data/ folder then if exists it returns the dictionary with NG, GT, bounds
     :param dataset: of the dataset
@@ -21,25 +22,26 @@ def search_dset(dataset, sigma):
     """
     path = "data/npz/"
     for f in os.listdir(path):
-        if f == f"{dataset}_{sigma:.5f}.npz":
+        if f == filename+".npz":
             return np.load(path+f)
     return None
 
 
-
 # Argparse
-#parser = argparse.ArgumentParser(description="Analysis of Szemeredi algorithm implementation")
-#parser.add_argument("dataset", help="Dataset name", type=str)
-#parser.add_argument("sigma", help="Sigma of Gaussian kernel", type=float)
-#args = parser.parse_args()
-#dataset = args.dataset
-#sigma = args.sigma
+parser = argparse.ArgumentParser(description="Analysis of Szemeredi algorithm implementation")
+parser.add_argument("dataset", help="Dataset name", type=str)
+parser.add_argument("sigma", help="Sigma of Gaussian kernel", type=float)
+parser.add_argument("--save", help="Save image instead of showing it", action="store_true")
+args = parser.parse_args()
+dataset = args.dataset
+sigma = args.sigma
+filename = f"{dataset}_{sigma:.5f}"
 
-dataset = 'ecoli'
-sigma = 0.475
+#dataset = 'ecoli'
+#sigma = 0.475
 
 print("[+] Searching for .npz file")
-data = search_dset(dataset, sigma)
+data = search_dset(filename)
 first_time = False
 if not data:
     first_time = True
@@ -65,13 +67,12 @@ else:
 # Start analysis
 s = SensitivityAnalysis(data)
 
-
 print("[+] Finding bounding epsilon")
-s.find_bounding_epsilons()
+bounds = s.find_bounds()
 
 
 if first_time:
-    np.savez(f"data/npz/{dataset}_{sigma:.5f}.npz", NG=NG, GT=GT, bounds=s.bounds, labels=labels)
+    np.savez(f"data/npz/{filename}.npz", NG=NG, GT=GT, bounds=bounds, labels=labels)
     print("    Data saved")
 
 
@@ -80,26 +81,29 @@ kec = s.find_partitions()
 
 
 print("[+] Performing threshold analysis")
+thresholds = np.arange(0, 1.0, 0.05)
+min_d = 0
+min_k = -1
+
 for k in kec.keys():
     print(f"  k: {k}")
     classes = kec[k][1]
-    dists = s.thresholds_analysis(classes, k, s.knn_voting_system)
-    plt.plot(s.thresholds, dists, label=f"k={k}")
+    dists = s.thresholds_analysis(classes, k, thresholds, s.L2_metric)
+    plt.plot(thresholds, dists, label=f"k={k}")
 
-ng_dist = s.knn_voting_system(s.NG)
+ng_dist = s.L2_metric(s.NG)
 print(f"  NG:\n    {ng_dist:.5f}")
-ng_dists = [ng_dist]*len(s.thresholds)
-plt.plot(s.thresholds, ng_dists, label="NG")
+ng_dists = [ng_dist]*len(thresholds)
+plt.plot(thresholds, ng_dists, label="NG")
 
 # Plot
-plt.title(f"{dataset}_{sigma:.5f}")
+plt.title(filename)
 plt.ylabel('Distance')
 plt.xlabel('Reconstruction Threshold')
 plt.legend(loc='lower right')
 
+if args.save:
+    plt.savefig(f"{filename}.png")
+
 plt.show()
-
-
-
-
 
