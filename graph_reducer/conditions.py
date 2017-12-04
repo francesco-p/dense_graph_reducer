@@ -15,6 +15,17 @@ def alon1(self, cl_pair):
     return cl_pair.bip_avg_deg < (self.epsilon ** 3.0) * cl_pair.n, [[], []], [[], []]
 
 
+def alon2new(self, cl_pair):
+
+    s_vertices_degrees = cl_pair.classes_vertices_degrees()[1, :]
+    deviated_nodes = np.abs(s_vertices_degrees - cl_pair.bip_avg_deg) > (self.epsilon ** 4.0) * cl_pair.n
+    if deviated_nodes.sum() > (1/8 * self.epsilon**4 * cl_pair.n):
+        pass
+    # se non trova il subset allora ritorno che la condition è falsa
+
+
+
+
 def alon2(self, cl_pair):
     """
     verify the second condition of Alon algorithm (irregularity of pair)

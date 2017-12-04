@@ -1,8 +1,5 @@
 """
 File: sensitivity_analysis.py
-Author: francesco-p (lakj)
-Email: 839220@stud.unive.it
-Github: https://github.com/francesco-p
 Description: This class performs a sensitivity analysis of the Szemeredi algorithm
 Coding: UTF-8
 """
@@ -16,7 +13,6 @@ from sklearn import metrics
 import sys
 sys.path.insert(1, '../graph_reducer/')
 import szemeredi_lemma_builder as slb
-
 
 
 class SensitivityAnalysis:
@@ -44,6 +40,7 @@ class SensitivityAnalysis:
         self.iteration_by_iteration = False
         self.verbose = False
         self.compression = 0.05
+
 
         # Matlab eng
         self.eng = None
@@ -184,8 +181,12 @@ class SensitivityAnalysis:
         for thresh in thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
             res = measure(sze_rec)
+            plt.imshow(sze_rec)
+            plt.title(f"l2(GT, rec_{k}_{thresh:.03f}):{thresh:.03f} = {res}")
+            plt.savefig(f"/tmp/sze_{k}_{thresh:.03f}.png")
             print(f"    {res:.5f}")
             self.measures.append(res)
+        ipdb.set_trace()
         return self.measures
 
 
@@ -197,8 +198,6 @@ class SensitivityAnalysis:
         :return: a numpy matrix of the size of GT
         """
         reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]), dtype='float32')
-        # TODO Is it always a complete graph????
-        adj_mat = (self.NG > 0.0).astype('float32')
         for r in range(2, k + 1):
             r_nodes = classes == r
             for s in range(1, r):
@@ -206,7 +205,6 @@ class SensitivityAnalysis:
                 index_map = np.where(classes == r)[0]
                 index_map = np.vstack((index_map, np.where(classes == s)[0]))
                 bip_sim_mat = self.NG[np.ix_(index_map[0], index_map[1])]
-                bip_adj_mat = adj_mat[np.ix_(index_map[0], index_map[1])]
                 n = bip_sim_mat.shape[0]
                 bip_density = bip_sim_mat.sum() / (n ** 2.0)
                 # Put edges if above threshold

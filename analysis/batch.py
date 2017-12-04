@@ -49,8 +49,10 @@ if not data:
 
     if dataset == 'XPCA':
         NG, GT, labels = proc.get_XPCA_data(sigma, 0)
-    elif dataset == 'GColi1':
-        NG, GT, labels = proc.get_GColi1_data()
+    elif dataset == 'GCoil1':
+        NG, GT, labels = proc.get_GCoil1_data()
+    elif dataset == 'custom':
+        NG, GT, labels  = proc.custom_cluster_matrix(5000, [3000, 1000, 500, 500], 0, 0)
     else:
         NG, GT, labels = proc.get_data(dataset, sigma)
 
@@ -75,7 +77,6 @@ if first_time:
     np.savez(f"data/npz/{filename}.npz", NG=NG, GT=GT, bounds=bounds, labels=labels)
     print("    Data saved")
 
-
 print("[+] Finding partitions")
 kec = s.find_partitions()
 
@@ -98,7 +99,7 @@ plt.plot(thresholds, ng_dists, label="NG")
 
 # Plot
 plt.title(filename)
-plt.ylabel('Distance')
+plt.ylabel('L2 Distance')
 plt.xlabel('Reconstruction Threshold')
 plt.legend(loc='lower right')
 

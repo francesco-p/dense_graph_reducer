@@ -44,15 +44,15 @@ def get_data(name, sigma):
     unq_labels, unq_counts = np.unique(labels, return_counts=True)
 
     NG = graph_from_points(features, sigma)
-    GT = custom_cluster_matrix(len(labels), unq_counts, 0, 0)
+    aux, GT, aux2 = custom_cluster_matrix(len(labels), unq_counts, 0, 0)
 
     return NG.astype('float32'), GT.astype('int32'), labels
 
 
-def get_GColi1_data():
+def get_GCoil1_data():
     data = sp.loadmat("data/GCoil1.mat")
     NG = data['GCoil1']
-    GT  = generate_matrix(72, 20, 0, 0, 'constant', 0)
+    GT  = cluster_matrix(72, 20, 0, 0, 'constant', 0)
     return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array([x for x in range(0,20)]), 72)
 
 
@@ -69,9 +69,9 @@ def get_XPCA_data(sigma, to_remove):
     c_dimensions = [1000]*int(tot_dim/1000)
     if tot_dim % 1000:
         c_dimensions.append(tot_dim % 1000)
-    GT = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0)
+    aux, GT, labels = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0)
 
-    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array([x for x in range(0,10)]), 1000)
+    return NG, GT, labels
 
 
 def synthetic_regular_partition(k, epsilon):
@@ -106,6 +106,7 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, noise_val):
     :param dims: list of cluster dimensions
     :param internoise_lvl : level of noise between clusters
     :param noise_lvl : value of the noise
+    :returns: NG, GT, labels
     """
     if len(dims) > mat_dim:
         sys.exit("You want more cluster than nodes???")
@@ -123,7 +124,8 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, noise_val):
         mat[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1)
         x += dim
 
-    return mat + mat.T
+    m = (mat + mat.T).astype('float32')
+    return m, m.astype('int16'), np.repeat(range(1, len(dims)+1,), dims)
 
 
 def cluster_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val):

@@ -2,19 +2,260 @@ import numpy as np
 import random
 import sys
 import ipdb
+import logging
 
 
-def randoramized(self):
-    """
-    perform step 4 of Alon algorithm, performing the refinement of the pairs, processing nodes in a random way. Some heuristic is applied in order to
-    speed up the process.
+
+def random_based(self):
+    """ Perform step 4 of Alon algorithm, performing the refinement of the pairs, processing nodes in a random way. Some heuristic is applied in order to speed up the process.
     """
     pass
 
 
+def density(self, indices_a, indices_b):
+    """ Calculates the density between two sets of vertices
+    :param indices_a: np.array(), the indices of the first set
+    :param indices_b: np.array(), the indices of the second set
+
+    sim_mat normalizzare e dividere sempre per max-edges
+    """
+    if np.array_equal(indices_a, indices_b):
+        n = len(indices_a)
+        max_edges = (n*(n-1))/2
+        n_edges = np.tril(self.adj_mat[np.ix_(indices_a, indices_a)], -1).sum()
+        return n_edges / max_edges
+
+    n_a = len(indices_a)
+    n_b = len(indices_b)
+    max_edges = n_a * n_b
+    n_edges = self.adj_mat[np.ix_(indices_a, indices_b)].sum()
+    return n_edges / max_edges
+
+
+def compute_indensities(self):
+    """ Compute the inside density for each class of a given partition
+    :returns: np.array(float32) of densities for each class in the partition
+    """
+    cls = list(range(0, self.k + 1))
+    densities = np.zeros(len(cls), dtype='float32')
+    for c in cls:
+        c_indices = np.where(self.classes == c)[0]
+        if c_indices.size:
+            densities[c] = density(self, c_indices, c_indices)
+        else:
+            densities[c] = 0
+
+    return densities
+
+
+def choose_candidate(self, in_densities, s, irregulars):
+    """ This function chooses a class between the irregular ones (d(ci,cj), 1-|d(ci,ci)-d(cj,cj)|)
+    :param in_densities: list(float), precomputed densities to speed up the calculations
+    :param s: int, the class which all the other classes are compared to
+    :param irregulars: list(int), the list of irregular classes
+    """
+    candidate_idx = -1
+    candidate = -1
+
+    # Exploit the precalculated densities
+    s_dens = in_densities[s]
+    for r in irregulars:
+        s_indices = np.where(self.classes == s)[0]
+        r_indices = np.where(self.classes == r)[0]
+        r_idx = density(self, s_indices, r_indices) + (1 - abs(s_dens - in_densities[r]))
+        if r_idx > candidate_idx:
+            candidate_idx = r_idx
+            candidate = r
+
+    return candidate
+
+
+def fill_new_set(self, new_set, compls, maximize_density):
+    """ Find nodes that can be added
+    Move from compls the nodes in can_be_added until we either finish the nodes or reach the desired cardinality
+    :param new_set: np.array(), array of indices of the set that must be augmented
+    :param compls: np.array(), array of indices used to augment the new_set
+    :param maximize_density: bool, used to augment or decrement density
+    """
+
+    if maximize_density:
+        nodes = self.adj_mat[np.ix_(new_set, compls)] == 1.0
+        # These are the nodes that can be added to certs, we take the most connected ones with all the others
+        to_add = np.unique(np.tile(compls, (len(new_set), 1))[nodes], return_counts=True)
+        to_add = to_add[0][to_add[1].argsort()]
+    else:
+        nodes = self.adj_mat[np.ix_(new_set, compls)] == 0.0
+        # These are the nodes that can be added to certs, we take the less connected ones with all the others
+        to_add = np.unique(np.tile(compls, (len(new_set), 1))[nodes], return_counts=True)
+        to_add = to_add[0][to_add[1].argsort()[::-1]]
+
+    while new_set.size < self.classes_cardinality:
+
+        # If there are nodes in to_add, we keep moving from compls to new_set
+        if to_add.size > 0:
+            node, to_add = to_add[-1], to_add[:-1]
+            new_set = np.append(new_set, node)
+            compls = np.delete(compls, np.argwhere(compls == node))
+
+        else:
+            # If there aren't candidate nodes, we keep moving from complements 
+            # to certs until we reach the desired cardinality
+            node, compls = compls[-1], compls[:-1]
+            new_set = np.append(new_set, node)
+
+    return new_set, compls
+
+
+def indeg_guided(self):
+    """
+    In-degree based refinemet. The refinement exploits the internal structure of the classes of a given partition.
+    :returns: True if the new partition is valid, False otherwise
+    """
+    threshold = 0.7
+
+    to_be_refined = list(range(1, self.k + 1))
+    self.classes_cardinality //= 2
+    in_densities = compute_indensities(self)
+    new_k = 0
+
+    while to_be_refined:
+        s = to_be_refined.pop(0)
+        irregular_r_indices = []
+
+        for r in to_be_refined:
+            if self.certs_compls_list[r - 2][s - 1][0][0]:
+                irregular_r_indices.append(r)
+
+        # If class s has irregular classes
+        if irregular_r_indices:
+
+            # Choose candidate based on the inside-outside density index
+            r = choose_candidate(self, in_densities, s, irregular_r_indices)
+            to_be_refined.remove(r)
+
+            s_certs = np.array(self.certs_compls_list[r - 2][s - 1][0][1]).astype('int32')
+            r_certs = np.array(self.certs_compls_list[r - 2][s - 1][0][0]).astype('int32')
+            s_compls = np.array(self.certs_compls_list[r - 2][s - 1][1][1]).astype('int32')
+            r_compls = np.array(self.certs_compls_list[r - 2][s - 1][1][0]).astype('int32')
+
+            # Merging the two complements
+            compls = np.append(s_compls, r_compls)
+
+            # Calculating certificates densities
+            dens_s_cert = density(self, s_certs, s_certs)
+            dens_r_cert = density(self, r_certs, r_certs)
+
+            for cert, dens in [(s_certs, dens_s_cert), (r_certs, dens_r_cert)]:
+
+                # Indices of the cert ordered by in-degree, it doesn't matter if we reverse the list as long as we unzip it 
+                degs = self.adj_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
+
+                if dens > threshold:
+                    # Certificates high density branch
+
+                    # Unzip them in half to preserve seeds
+                    set1=  cert[degs[0:][::2]]
+                    set2 =  cert[degs[1:][::2]]
+
+                    # Adjust cardinality of the new set to the desired cardinality
+                    set1, compls = fill_new_set(self, set1, compls, True)
+                    set2, compls = fill_new_set(self, set2, compls, True)
+
+                    # Handling of odd classes
+                    new_k -= 1
+                    self.classes[set1] = new_k
+                    if set1.size > self.classes_cardinality:
+                        self.classes[set1[-1]] = 0
+                    new_k -= 1
+                    self.classes[set2] = new_k
+                    if set2.size > self.classes_cardinality:
+                        self.classes[set2[-1]] = 0
+
+                else:
+                    # Certificates low density branch
+                    set1 = np.random.choice(cert, len(cert)//2, replace=False)
+                    set2 = np.setdiff1d(cert, set1)
+
+                    # Adjust cardinality of the new set to the desired cardinality
+                    set1, compls = fill_new_set(self, set1, compls, False)
+                    set2, compls = fill_new_set(self, set2, compls, False)
+
+                    # Handling of odd classes
+                    new_k -= 1
+                    self.classes[set1] = new_k
+                    if set1.size > self.classes_cardinality:
+                        self.classes[set1[-1]] = 0
+                    new_k -= 1
+                    self.classes[set2] = new_k
+                    if set2.size > self.classes_cardinality:
+                        self.classes[set2[-1]] = 0
+
+                # Handle special case when there are still some complements not assigned
+                if compls.size > 0:
+                    self.classes[compls] = 0
+
+        else:
+            # The class is e-reg with all the others or it does not have irregular classes
+
+            # Sort by indegree and unzip the structure
+            s_indices = np.where(self.classes == s)[0]
+            s_indegs = self.adj_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
+
+            set1=  s_indices[s_indegs[0:][::2]]
+            set2=  s_indices[s_indegs[1:][::2]]
+
+            # Handling of odd classes
+            new_k -= 1
+            self.classes[set1] = new_k
+            if set1.size > self.classes_cardinality:
+                self.classes[set1[-1]] = 0
+            new_k -= 1
+            self.classes[set2] = new_k
+            if set1.size > self.classes_cardinality:
+                self.classes[set1[-1]] = 0
+
+    self.k *= 2
+
+    # Check validity of class C0, if invalid and enough nodes, distribute the exceeding nodes among the classes
+    c0_indices = np.where(self.classes == 0)[0]
+    if c0_indices.size >= (self.epsilon * self.adj_mat.shape[0]):
+        if c0_indices.size > self.k:
+            self.classes[c0_indices[:self.k]] = np.array(range(1, self.k+1))*-1
+        else:
+            logging.warning("Invalid cardinality of C_0")
+            return False
+
+    self.classes *= -1
+
+    return True
+
+
+def partition_correct(self):
+    """ 
+    Routine to check if the partition is valid
+    :returns: True if the classes of the partition have the right cardinalities, false otherwise
+    """
+    for i in range(1, self.k+1):
+        if not np.where(self.classes == i)[0].size == self.classes_cardinality:
+            return False
+    return True
+
+
+def within_degrees(self, c):
+    """ Given a class c it returns the degrees calculated within the class
+    :param c: int, class c
+    :returns: np.array(int16), list of n indices where the indices in c have the in-degree
+    """
+    c_degs = np.zeros(len(self.degrees), dtype='int16')
+    c_indices = np.where(self.classes == c)[0]
+    c_degs[c_indices] = self.adj_mat[np.ix_(c_indices, c_indices)].sum(1)
+
+    return c_degs
+
+
 def get_s_r_degrees(self,s,r):
     """
-    Given two classes it returns a degree vector (indicator vector) where the degrees 
+    Given two classes it returns a degree vector (indicator vector) where the degrees
     have been calculated with respecto to each other set.
     :param s: int, class s
     :param r: int, class r

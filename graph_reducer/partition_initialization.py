@@ -1,4 +1,5 @@
 import numpy as np
+import ipdb
 
 
 def random(self, b=2):
@@ -11,12 +12,10 @@ def random(self, b=2):
             if set to False, node are decreasingly ordered by their degree and then splitted
             in classes
     """
-    self.k = b
-    self.classes = np.zeros(self.N)
+    self.k = 2
+    self.classes = np.zeros(self.N).astype('int32')
     self.classes_cardinality = self.N // self.k
-
-    for i in range(self.k):
-        self.classes[(i * self.classes_cardinality):((i + 1) * self.classes_cardinality)] = i + 1
+    self.classes = np.repeat(range(1, self.k+1), self.classes_cardinality).astype('int32')
 
     np.random.shuffle(self.classes)
 

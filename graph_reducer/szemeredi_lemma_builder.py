@@ -30,7 +30,8 @@ def generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weigh
     if random_refinement:
         alg.refinement_step = refinement_step.random
     else:
-        alg.refinement_step = refinement_step.degree_based
+        #alg.refinement_step = refinement_step.degree_based
+        alg.refinement_step = refinement_step.indeg_guided
 
     if kind == "alon":
         alg.conditions = [conditions.alon1, conditions.alon2, conditions.alon3]
