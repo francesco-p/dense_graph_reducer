@@ -2,7 +2,32 @@ import scipy.io as sp
 import numpy as np
 import ipdb
 import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
 
+
+def gen_graph(n, d):
+    """ Generate a n,n graph with a given density d
+    :param d: float density of the graph
+    :return: np.array((n, n), dtype='float32') graph with density d
+    """
+    max_edges = (n * (n - 1))/2
+    n_holes = int((1 - d) * max_edges)
+    G = np.tril(np.ones((n, n), dtype='int8'), -1)
+    ones_indices = np.where(G == 1)
+    zeros_indices = np.random.choice(range(0,ones_indices[0].size), n_holes, replace=False)
+    G[ones_indices[0][zeros_indices], ones_indices[1][zeros_indices]] = 0
+
+    return G + G.T
+
+def density(G):
+    """ Check density of a graph
+    :param G: np.array((n, n), dtype='int8') graph
+    :return: float density of the graph
+    """
+    n = G.shape[0]
+    e = np.where(G == 1)[0].size / 2
+    return e / ((n*(n-1))/2)
 
 
 def graph_from_points(x, sigma, to_remove=0):
@@ -36,7 +61,6 @@ def get_data(name, sigma):
     :param sigma: sigma of the gaussian kernel
     :return: NG, GT, labels
     """
-
     df = pd.read_csv(f"data/{name}.csv", delimiter=',', header=None)
     labels = df.iloc[:,-1].astype('category').cat.codes.values
     features = df.values[:,:-1].astype('float32')
@@ -53,17 +77,13 @@ def get_GCoil1_data():
     data = sp.loadmat("data/GCoil1.mat")
     NG = data['GCoil1']
     GT  = cluster_matrix(72, 20, 0, 0, 'constant', 0)
-    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array([x for x in range(0,20)]), 72)
+    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array(range(0,20)), 72)
 
 
 def get_XPCA_data(sigma, to_remove):
 
-    c_dimensions = ['XPCA']
     data = sp.loadmat("data/XPCA.mat")
-
-    arr_feature = data['X']
-    NG = graph_from_points(arr_feature, sigma, to_remove) #0.0124 00248  0.0496 e 0.0744
-
+    NG = graph_from_points(data['X'], sigma, to_remove)
     # Generates the custo GT wrt the number of rows removed
     tot_dim = 10000-to_remove
     c_dimensions = [1000]*int(tot_dim/1000)
@@ -73,6 +93,13 @@ def get_XPCA_data(sigma, to_remove):
 
     return NG, GT, labels
 
+
+def get_flicker32(sigma):
+    data = sp.loadmat("data/flicker32.mat")
+    #NG = graph_from_points(data['GISTall'], sigma, 0)
+    NG = data['K25']
+    GT  = cluster_matrix(70, 32, 0, 0, 'constant', 0)
+    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array(range(0,32)), 70)
 
 def synthetic_regular_partition(k, epsilon):
     """
@@ -178,3 +205,13 @@ def cluster_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, mod
 
     return mat
 
+G = gen_graph(10000, 0.99)
+assert G.dtype == 'int8', 'incorrect data type'
+
+d = density(G)
+assert d == 0.99, 'incorrect data type'
+
+print(G.nbytes / 1024**2)
+
+plt.imshow(G)
+plt.show()

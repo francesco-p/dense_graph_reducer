@@ -52,7 +52,7 @@ class SensitivityAnalysis:
         :param dset: the new dictionary hoding NG GT and the bounds
         """
         self.dset = dset
-        self.NG = self.dset['NG']
+        self.NG = self.dset['NG'] / self.dset['NG'].max()
         self.GT = self.dset['GT']
         self.labels = self.dset['labels']
         self.bounds = list(self.dset['bounds']) # to pass the test in find bounding epsilons
@@ -181,12 +181,11 @@ class SensitivityAnalysis:
         for thresh in thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
             res = measure(sze_rec)
-            plt.imshow(sze_rec)
-            plt.title(f"l2(GT, rec_{k}_{thresh:.03f}):{thresh:.03f} = {res}")
-            plt.savefig(f"/tmp/sze_{k}_{thresh:.03f}.png")
+            #plt.imshow(sze_rec)
+            #plt.title(f"l2(GT, rec_{k}_{thresh:.03f}):{thresh:.03f} = {res}")
+            #plt.savefig(f"/tmp/sze_{k}_{thresh:.03f}.png")
             print(f"    {res:.5f}")
             self.measures.append(res)
-        ipdb.set_trace()
         return self.measures
 
 
@@ -199,17 +198,26 @@ class SensitivityAnalysis:
         """
         reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]), dtype='float32')
         for r in range(2, k + 1):
-            r_nodes = classes == r
+            r_nodes = np.where(classes == r)[0]
             for s in range(1, r):
-                s_nodes = classes == s
-                index_map = np.where(classes == r)[0]
-                index_map = np.vstack((index_map, np.where(classes == s)[0]))
-                bip_sim_mat = self.NG[np.ix_(index_map[0], index_map[1])]
+                s_nodes = np.where(classes == s)[0]
+                bip_sim_mat = self.NG[np.ix_(r_nodes, s_nodes)]
                 n = bip_sim_mat.shape[0]
                 bip_density = bip_sim_mat.sum() / (n ** 2.0)
                 # Put edges if above threshold
                 if bip_density > thresh:
                     reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
+
+        # Implements indensity information preservation
+        for c in range(1, k+1):
+            indices_c = np.where(classes == c)[0]
+            n = len(indices_c)
+            max_edges = (n*(n-1))/2
+            n_edges = np.tril(self.NG[np.ix_(indices_c, indices_c)], -1).sum()
+            indensity = n_edges / max_edges
+            if np.random.uniform(0,1,1) <= indensity:
+                 reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
+
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
 
@@ -254,6 +262,7 @@ class SensitivityAnalysis:
         """
         return np.linalg.norm(self.GT-graph)/self.GT.shape[0]
 
+
     def ACT_metric(self, graph):
         """
         Compute Amplitude Commute Time with a Matlab engine request, it does not
@@ -264,10 +273,32 @@ class SensitivityAnalysis:
         if not self.eng:
             print("[+] Starting Matlab engine ...")
             self.eng = matlab.engine.start_matlab()
+            self.eng.addpath(r'./matlab_code',nargout=0)
 
         mat_GT = matlab.double(self.GT.tolist())
         mat_NG = matlab.double(graph.tolist())
         res = self.eng.get_ACT(mat_NG, mat_GT)
+
+        return res
+
+
+    def NGU_metric(self, graph):
+        """
+        Compute Nguyen metric
+        :param graph: reconstructed graph
+        :returns: accuracy of Nguyen paper
+        """
+        if not self.eng:
+            print("[+] Starting Matlab engine ...")
+            self.eng = matlab.engine.start_matlab()
+            self.eng.addpath(r'./matlab_code',nargout=0)
+
+        mat_NG = matlab.double(self.NG.tolist())
+        mat_sze_rec = matlab.double(graph.tolist())
+
+        ipdb.set_trace()
+        self.eng.myconnect(mat_sze_rec)
+        res = self.eng.kmedoidsAccdat(mat_sze_rec, matlab.int32(np.vstack(self.labels).tolist()), np.unique(self.labels).size)
 
         return res
 

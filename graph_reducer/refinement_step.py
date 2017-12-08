@@ -5,7 +5,6 @@ import ipdb
 import logging
 
 
-
 def random_based(self):
     """ Perform step 4 of Alon algorithm, performing the refinement of the pairs, processing nodes in a random way. Some heuristic is applied in order to speed up the process.
     """
@@ -19,16 +18,20 @@ def density(self, indices_a, indices_b):
 
     sim_mat normalizzare e dividere sempre per max-edges
     """
+    #self.sim_mat = self.sim_mat / self.sim_mat.max()
+
     if np.array_equal(indices_a, indices_b):
         n = len(indices_a)
         max_edges = (n*(n-1))/2
-        n_edges = np.tril(self.adj_mat[np.ix_(indices_a, indices_a)], -1).sum()
+        #n_edges = np.tril(self.adj_mat[np.ix_(indices_a, indices_a)], -1).sum()
+        n_edges = np.tril(self.sim_mat[np.ix_(indices_a, indices_a)], -1).sum()
         return n_edges / max_edges
 
     n_a = len(indices_a)
     n_b = len(indices_b)
     max_edges = n_a * n_b
-    n_edges = self.adj_mat[np.ix_(indices_a, indices_b)].sum()
+    #n_edges = self.adj_mat[np.ix_(indices_a, indices_b)].sum()
+    n_edges = self.sim_mat[np.ix_(indices_a, indices_b)].sum()
     return n_edges / max_edges
 
 
@@ -79,12 +82,14 @@ def fill_new_set(self, new_set, compls, maximize_density):
     """
 
     if maximize_density:
-        nodes = self.adj_mat[np.ix_(new_set, compls)] == 1.0
+        #nodes = self.adj_mat[np.ix_(new_set, compls)] == 1.0
+        nodes = self.sim_mat[np.ix_(new_set, compls)] >= 0.5
         # These are the nodes that can be added to certs, we take the most connected ones with all the others
         to_add = np.unique(np.tile(compls, (len(new_set), 1))[nodes], return_counts=True)
         to_add = to_add[0][to_add[1].argsort()]
     else:
-        nodes = self.adj_mat[np.ix_(new_set, compls)] == 0.0
+        #nodes = self.adj_mat[np.ix_(new_set, compls)] == 0.0
+        nodes = self.sim_mat[np.ix_(new_set, compls)] < 0.5
         # These are the nodes that can be added to certs, we take the less connected ones with all the others
         to_add = np.unique(np.tile(compls, (len(new_set), 1))[nodes], return_counts=True)
         to_add = to_add[0][to_add[1].argsort()[::-1]]
@@ -111,7 +116,7 @@ def indeg_guided(self):
     In-degree based refinemet. The refinement exploits the internal structure of the classes of a given partition.
     :returns: True if the new partition is valid, False otherwise
     """
-    threshold = 0.7
+    threshold = 0.5
 
     to_be_refined = list(range(1, self.k + 1))
     self.classes_cardinality //= 2
@@ -148,7 +153,8 @@ def indeg_guided(self):
             for cert, dens in [(s_certs, dens_s_cert), (r_certs, dens_r_cert)]:
 
                 # Indices of the cert ordered by in-degree, it doesn't matter if we reverse the list as long as we unzip it 
-                degs = self.adj_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
+                #degs = self.adj_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
+                degs = self.sim_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
 
                 if dens > threshold:
                     # Certificates high density branch
@@ -199,7 +205,8 @@ def indeg_guided(self):
 
             # Sort by indegree and unzip the structure
             s_indices = np.where(self.classes == s)[0]
-            s_indegs = self.adj_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
+            #s_indegs = self.adj_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
+            s_indegs = self.sim_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
 
             set1=  s_indices[s_indegs[0:][::2]]
             set2=  s_indices[s_indegs[1:][::2]]

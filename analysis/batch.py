@@ -26,7 +26,6 @@ def search_dset(filename):
             return np.load(path+f)
     return None
 
-
 # Argparse
 parser = argparse.ArgumentParser(description="Analysis of Szemeredi algorithm implementation")
 parser.add_argument("dataset", help="Dataset name", type=str)
@@ -51,6 +50,8 @@ if not data:
         NG, GT, labels = proc.get_XPCA_data(sigma, 0)
     elif dataset == 'GCoil1':
         NG, GT, labels = proc.get_GCoil1_data()
+    elif dataset == 'flicker32':
+        NG, GT, labels = proc.get_flicker32(sigma)
     elif dataset == 'custom':
         NG, GT, labels  = proc.custom_cluster_matrix(5000, [3000, 1000, 500, 500], 0, 0)
     else:
@@ -99,7 +100,7 @@ plt.plot(thresholds, ng_dists, label="NG")
 
 # Plot
 plt.title(filename)
-plt.ylabel('L2 Distance')
+plt.ylabel(s.L2_metric.__name__)
 plt.xlabel('Reconstruction Threshold')
 plt.legend(loc='lower right')
 
