@@ -13,18 +13,6 @@ import process_datasets as proc
 from sensitivity_analysis import SensitivityAnalysis
 
 
-def search_dset(filename):
-    """
-    Search for a .npz file into data/ folder then if exists it returns the dictionary with NG, GT, bounds
-    :param dataset: of the dataset
-    :param sigma: sigma of the gaussian kernel
-    :returns: None if no file or the dictionary
-    """
-    path = "data/npz/"
-    for f in os.listdir(path):
-        if f == filename+".npz":
-            return np.load(path+f)
-    return None
 
 # Argparse
 parser = argparse.ArgumentParser(description="Analysis of Szemeredi algorithm implementation")
@@ -40,7 +28,7 @@ filename = f"{dataset}_{sigma:.5f}"
 #sigma = 0.475
 
 print("[+] Searching for .npz file")
-data = search_dset(filename)
+data = proc.search_dset(filename)
 first_time = False
 if not data:
     first_time = True

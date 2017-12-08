@@ -4,6 +4,19 @@ import ipdb
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+import os
+
+def search_dset(filename):
+    """ Search for a .npz file into data/ folder then if exists it returns the dictionary with NG, GT, bounds
+    :param dataset: of the dataset
+    :param sigma: sigma of the gaussian kernel
+    :returns: None if no file or the dictionary
+    """
+    path = "data/npz/"
+    for f in os.listdir(path):
+        if f == filename+".npz":
+            return np.load(path+f)
+    return None
 
 
 def gen_graph(n, d):
@@ -31,8 +44,7 @@ def density(G):
 
 
 def graph_from_points(x, sigma, to_remove=0):
-    """
-    Generates a graph (weighted graph) from a set of points x (nxd) and a sigma decay
+    """ Generates a graph (weighted graph) from a set of points x (nxd) and a sigma decay
     :param x: a numpy matrix of n times d dimension
     :param sigma: a sigma for the gaussian kernel
     :param to_remove: imbalances the last cluster
@@ -55,8 +67,7 @@ def graph_from_points(x, sigma, to_remove=0):
 
 
 def get_data(name, sigma):
-    """
-    Given a .csv features:label it returns the dataset modified with a gaussian kernel
+    """ Given a .csv features:label it returns the dataset modified with a gaussian kernel
     :param name: the name of the dataset,it must be in the data folder
     :param sigma: sigma of the gaussian kernel
     :return: NG, GT, labels
@@ -102,8 +113,7 @@ def get_flicker32(sigma):
     return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array(range(0,32)), 70)
 
 def synthetic_regular_partition(k, epsilon):
-    """
-    Generates a synthetic regular partition.
+    """ Generates a synthetic regular partition.
     :param k: the cardinality of the partition
     :param epsilon: the epsilon parameter to calculate the number of irregular pairs
     :return: a weighted symmetric graph
@@ -127,8 +137,7 @@ def synthetic_regular_partition(k, epsilon):
 
 
 def custom_cluster_matrix(mat_dim, dims, internoise_lvl, noise_val):
-    """
-    Custom noisy matrix
+    """ Custom noisy matrix
     :param mat_dim : dimension of the whole graph
     :param dims: list of cluster dimensions
     :param internoise_lvl : level of noise between clusters
@@ -156,9 +165,7 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, noise_val):
 
 
 def cluster_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, modality, noise_val):
-    """
-    Generate a noisy adjacency matrix with noisy cluster over the diagonal. The computed matrix will have size = n_cluster * cluster_size
-
+    """ Generate a noisy adjacency matrix with noisy cluster over the diagonal. The computed matrix will have size = n_cluster * cluster_size
     :param n_clusters: number of cluster
     :param cluster_size: size of a single cluster
     :param internoise_lvl: percentage of noise between the clusters (0.0 for no noise)
@@ -205,13 +212,3 @@ def cluster_matrix(cluster_size, n_clusters, internoise_lvl, intranoise_lvl, mod
 
     return mat
 
-G = gen_graph(10000, 0.99)
-assert G.dtype == 'int8', 'incorrect data type'
-
-d = density(G)
-assert d == 0.99, 'incorrect data type'
-
-print(G.nbytes / 1024**2)
-
-plt.imshow(G)
-plt.show()
