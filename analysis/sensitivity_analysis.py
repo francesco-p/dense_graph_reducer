@@ -7,7 +7,6 @@ Coding: UTF-8
 import numpy as np
 import matplotlib.pyplot as plt
 import matlab.engine
-import process_datasets as pd
 import ipdb
 from sklearn import metrics
 import sys
@@ -45,6 +44,9 @@ class SensitivityAnalysis:
         # Matlab eng
         self.eng = None
 
+        # Global print
+        self.verbose = True
+
 
     def set_dset(self, dset):
         """
@@ -72,10 +74,10 @@ class SensitivityAnalysis:
                                                                     self.random_initialization,
                                                                     self.random_refinement,
                                                                     self.drop_edges_between_irregular_pairs)
-        regular, k, classes = self.srla.run(iteration_by_iteration=self.iteration_by_iteration,
+        regular, k, classes, sze_idx = self.srla.run(iteration_by_iteration=self.iteration_by_iteration,
                                                     verbose=self.verbose,
                                                     compression_rate=self.compression)
-        return regular, k, classes
+        return regular, k, classes, sze_idx
 
 
     def find_trivial_epsilon(self, epsilon1, epsilon2):
@@ -90,9 +92,11 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
-            regular, k, classes = self.run_alg(epsilon_middle)
-            print(f"{k} {regular}")
+            if self.verbose:
+                print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
+            regular, k, classes, sze_idx = self.run_alg(epsilon_middle)
+            if self.verbose:
+                print(f"{k} {regular}")
 
             if regular:
                 if k==self.min_k:
@@ -119,9 +123,11 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
-            regular, k, classes = self.run_alg(epsilon_middle)
-            print(f"{k} {regular}")
+            if self.verbose:
+                print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
+            regular, k, classes, sze_idx = self.run_alg(epsilon_middle)
+            if self.verbose:
+                print(f"{k} {regular}")
             if regular:
                 del self.srla
                 return self.find_edge_epsilon(epsilon1, epsilon_middle)
@@ -139,12 +145,15 @@ class SensitivityAnalysis:
             epsilon1 = self.bounds[0]
             epsilon2 = self.bounds[1]
         else:
-            print("     Finding trivial epsilon...")
+            if self.verbose:
+                print("     Finding trivial epsilon...")
             epsilon2 = self.find_trivial_epsilon(0, 1)
-            print(f"    Trivial epsilon candidate: {epsilon2:.6f}")
-            print("    Finding edge epsilon...")
+            if self.verbose:
+                print(f"    Trivial epsilon candidate: {epsilon2:.6f}")
+                print("    Finding edge epsilon...")
             epsilon1 = self.find_edge_epsilon(0, epsilon2)
-            print(f"    Edge epsilon candidate: {epsilon1:.6f}")
+            if self.verbose:
+                print(f"    Edge epsilon candidate: {epsilon1:.6f}")
         self.bounds = [epsilon1, epsilon2]
         self.epsilons = [epsilon1]
         # Try self.tries different epsilons inside the bounds
@@ -158,15 +167,17 @@ class SensitivityAnalysis:
     def find_partitions(self):
         """
         Start looking for partitions
-        :returns: a dictionary with the cardinality of the partition, the corresponding epsilon and the classes reduced array
+        :returns: a dictionary with the cardinality of the partition, the corresponding epsilon, the classes reduced array and the szemeredi index
         """
-        self.k_e_c= {}
+        self.k_e_c_i= {}
         for epsilon in self.epsilons:
-            regular, k, classes = self.run_alg(epsilon)
-            print(f"    {epsilon:.6f} {k} {regular}")
-            if (k not in self.k_e_c) and regular and k!=2:
-                self.k_e_c[k] = (epsilon, classes)
-        return self.k_e_c
+            regular, k, classes, sze_idx = self.run_alg(epsilon)
+            if self.verbose:
+                print(f"    {epsilon:.6f} {k} {regular}")
+            # Discard partition k=2
+            if (k not in self.k_e_c_i) and regular and k!=2:
+                self.k_e_c_i[k] = (epsilon, classes, sze_idx)
+        return self.k_e_c_i
 
 
     def thresholds_analysis(self, classes, k, thresholds, measure):
@@ -184,7 +195,8 @@ class SensitivityAnalysis:
             #plt.imshow(sze_rec)
             #plt.title(f"l2(GT, rec_{k}_{thresh:.03f}):{thresh:.03f} = {res}")
             #plt.savefig(f"/tmp/sze_{k}_{thresh:.03f}.png")
-            print(f"    {res:.5f}")
+            if self.verbose:
+                print(f"    {res:.5f}")
             self.measures.append(res)
         return self.measures
 
