@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 
 def search_dset(filename):
-    """ Search for a .npz file into data/ folder then if exists it returns the dictionary with NG, GT, bounds
+    """ Search for a .npz file into data/npz/ folder then if exists it returns the dictionary with NG, GT, bounds
     :param dataset: of the dataset
     :param sigma: sigma of the gaussian kernel
     :returns: None if no file or the dictionary
@@ -16,25 +16,20 @@ def search_dset(filename):
     for f in os.listdir(path):
         if f == filename+".npz":
             return np.load(path+f)
-    return None
+    raise FileNotFoundError(f"{path}{filename}.npz")
 
 
-def gen_graph(n, d):
+def synthetic_graph(n, d):
     """ Generate a n,n graph with a given density d
     :param d: float density of the graph
     :return: np.array((n, n), dtype='float32') graph with density d
     """
-    max_edges = (n * (n - 1))/2
-    n_holes = int((1 - d) * max_edges)
-    G = np.tril(np.ones((n, n), dtype='int8'), -1)
-    ones_indices = np.where(G == 1)
-    zeros_indices = np.random.choice(range(0,ones_indices[0].size), n_holes, replace=False)
-    G[ones_indices[0][zeros_indices], ones_indices[1][zeros_indices]] = 0
-
+    G = np.tril(np.random.random((n, n)) < d, -1).astype('int8')
     return G + G.T
 
+
 def density(G):
-    """ Check density of a graph
+    """ Check density of a synthetic graph
     :param G: np.array((n, n), dtype='int8') graph
     :return: float density of the graph
     """

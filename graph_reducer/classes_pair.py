@@ -21,9 +21,11 @@ class ClassesPair:
     def __init__(self, adj_mat, classes, r, s, epsilon):
         self.r = r
         self.s = s
+        # [TODO] optimization: why using index_map? and vstack? to check the cardinality?
         self.index_map = np.where(classes == r)[0]
         self.index_map = np.vstack((self.index_map, np.where(classes == s)[0]))
         self.bip_adj_mat = adj_mat[np.ix_(self.index_map[0], self.index_map[1])]
+        # [TODO] question: wouldn't it be = to self.classes_cardinality?
         self.n = self.bip_adj_mat.shape[0]
         self.bip_avg_deg = self.bip_avg_degree()
         self.bip_density = self.compute_bip_density()
@@ -42,6 +44,7 @@ class ClassesPair:
         bipartite graph
         :return the density
         """
+        # [TODO] optimization: does sum() already return a float?
         return float(self.bip_adj_mat.sum()) / (self.n ** 2.0)
 
     def classes_vertices_degrees(self):
@@ -63,6 +66,7 @@ class ClassesPair:
     #     return nh_mat - ((self.bip_avg_deg ** 2.0) / self.n)
 
     def neighbourhood_deviation_matrix(self, transpose_first=True):
+        # [TODO] can we do it in gpu with cuBLAS? :)
         if transpose_first:
             mat = self.bip_adj_mat.T @ self.bip_adj_mat
         else:

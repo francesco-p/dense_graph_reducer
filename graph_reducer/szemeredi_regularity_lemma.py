@@ -58,6 +58,7 @@ class SzemerediRegularityLemma:
     def __init__(self, sim_mat, epsilon, is_weighted, drop_edges_between_irregular_pairs):
         if is_weighted:
             self.sim_mat = sim_mat
+        # [TODO] performance issue: int8 instead float32, no need to check if bigger than 0
         self.adj_mat = (sim_mat > 0.0).astype('float32')
         self.epsilon = epsilon
         self.N = self.adj_mat.shape[0]
@@ -209,7 +210,7 @@ class SzemerediRegularityLemma:
                 if verbose:
                     # Cardinality too low irregular by definition
                     print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
-                return (False, self.k, None)
+                return (False, self.k, None, self.index_vec[-1])
                 
             if verbose:
                 print("{0}, {1}, {2}, {3} irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]) )        
@@ -220,8 +221,8 @@ class SzemerediRegularityLemma:
                 if verbose:
                     # Irregular by definition
                     print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
-                return (False, self.k, None)
+                return (False, self.k, None, self.index_vec[-1])
 
         #self.generate_reduced_sim_mat()
         #return (True, self.k, self.reduced_sim_mat)
-        return (True, self.k, self.classes)
+        return (True, self.k, self.classes, self.index_vec[-1])

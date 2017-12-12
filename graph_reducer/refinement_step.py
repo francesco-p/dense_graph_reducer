@@ -11,27 +11,44 @@ def random_based(self):
     pass
 
 
+def partition_correct(self):
+    """ Checks if the partition cardinalities are valid
+    :returns: True if the classes of the partition have the right cardinalities, false otherwise
+    """
+    for i in range(1, self.k+1):
+        if not np.where(self.classes == i)[0].size == self.classes_cardinality:
+            return False
+    return True
+
+
+##########################################################################
+######################## INDEGREE REFINEMENT #############################
+##########################################################################
+
+
 def density(self, indices_a, indices_b):
     """ Calculates the density between two sets of vertices
     :param indices_a: np.array(), the indices of the first set
     :param indices_b: np.array(), the indices of the second set
-
-    sim_mat normalizzare e dividere sempre per max-edges
     """
-    #self.sim_mat = self.sim_mat / self.sim_mat.max()
+    if indices_a.size == 0 or indices_b.size == 0:
+        return 0
+    elif indices_a.size == indices_b.size == 1:
+        return 0
 
+    # [TODO] performance issue: comparing all the indices? maybe add a parameter to the function
     if np.array_equal(indices_a, indices_b):
-        n = len(indices_a)
+        n = indices_a.size
         max_edges = (n*(n-1))/2
-        #n_edges = np.tril(self.adj_mat[np.ix_(indices_a, indices_a)], -1).sum()
-        n_edges = np.tril(self.sim_mat[np.ix_(indices_a, indices_a)], -1).sum()
+        n_edges = np.tril(self.adj_mat[np.ix_(indices_a, indices_a)], -1).sum()
+        #n_edges = np.tril(self.sim_mat[np.ix_(indices_a, indices_a)], -1).sum()
         return n_edges / max_edges
 
-    n_a = len(indices_a)
-    n_b = len(indices_b)
+    n_a = indices_a.size
+    n_b = indices_b.size
     max_edges = n_a * n_b
-    #n_edges = self.adj_mat[np.ix_(indices_a, indices_b)].sum()
-    n_edges = self.sim_mat[np.ix_(indices_a, indices_b)].sum()
+    n_edges = self.adj_mat[np.ix_(indices_a, indices_b)].sum()
+    #n_edges = self.sim_mat[np.ix_(indices_a, indices_b)].sum()
     return n_edges / max_edges
 
 
@@ -82,14 +99,16 @@ def fill_new_set(self, new_set, compls, maximize_density):
     """
 
     if maximize_density:
-        #nodes = self.adj_mat[np.ix_(new_set, compls)] == 1.0
-        nodes = self.sim_mat[np.ix_(new_set, compls)] >= 0.5
+        nodes = self.adj_mat[np.ix_(new_set, compls)] == 1.0
+        #nodes = self.sim_mat[np.ix_(new_set, compls)] >= 0.5
+
         # These are the nodes that can be added to certs, we take the most connected ones with all the others
         to_add = np.unique(np.tile(compls, (len(new_set), 1))[nodes], return_counts=True)
         to_add = to_add[0][to_add[1].argsort()]
     else:
-        #nodes = self.adj_mat[np.ix_(new_set, compls)] == 0.0
-        nodes = self.sim_mat[np.ix_(new_set, compls)] < 0.5
+        nodes = self.adj_mat[np.ix_(new_set, compls)] == 0.0
+        #nodes = self.sim_mat[np.ix_(new_set, compls)] < 0.5
+
         # These are the nodes that can be added to certs, we take the less connected ones with all the others
         to_add = np.unique(np.tile(compls, (len(new_set), 1))[nodes], return_counts=True)
         to_add = to_add[0][to_add[1].argsort()[::-1]]
@@ -103,7 +122,7 @@ def fill_new_set(self, new_set, compls, maximize_density):
             compls = np.delete(compls, np.argwhere(compls == node))
 
         else:
-            # If there aren't candidate nodes, we keep moving from complements 
+            # If there aren't candidate nodes, we keep moving from complements
             # to certs until we reach the desired cardinality
             node, compls = compls[-1], compls[:-1]
             new_set = np.append(new_set, node)
@@ -112,8 +131,7 @@ def fill_new_set(self, new_set, compls, maximize_density):
 
 
 def indeg_guided(self):
-    """
-    In-degree based refinemet. The refinement exploits the internal structure of the classes of a given partition.
+    """ In-degree based refinemet. The refinement exploits the internal structure of the classes of a given partition.
     :returns: True if the new partition is valid, False otherwise
     """
     threshold = 0.5
@@ -152,9 +170,9 @@ def indeg_guided(self):
 
             for cert, dens in [(s_certs, dens_s_cert), (r_certs, dens_r_cert)]:
 
-                # Indices of the cert ordered by in-degree, it doesn't matter if we reverse the list as long as we unzip it 
-                #degs = self.adj_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
-                degs = self.sim_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
+                # Indices of the cert ordered by in-degree, it doesn't matter if we reverse the list as long as we unzip it
+                degs = self.adj_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
+                #degs = self.sim_mat[np.ix_(cert, cert)].sum(1).argsort()[::-1]
 
                 if dens > threshold:
                     # Certificates high density branch
@@ -205,8 +223,8 @@ def indeg_guided(self):
 
             # Sort by indegree and unzip the structure
             s_indices = np.where(self.classes == s)[0]
-            #s_indegs = self.adj_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
-            s_indegs = self.sim_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
+            s_indegs = self.adj_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
+            #s_indegs = self.sim_mat[np.ix_(s_indices, s_indices)].sum(1).argsort()
 
             set1=  s_indices[s_indegs[0:][::2]]
             set2=  s_indices[s_indegs[1:][::2]]
@@ -226,10 +244,10 @@ def indeg_guided(self):
     # Check validity of class C0, if invalid and enough nodes, distribute the exceeding nodes among the classes
     c0_indices = np.where(self.classes == 0)[0]
     if c0_indices.size >= (self.epsilon * self.adj_mat.shape[0]):
-        if c0_indices.size > self.k:
+        if c0_indices.ize > self.k:
             self.classes[c0_indices[:self.k]] = np.array(range(1, self.k+1))*-1
         else:
-            logging.warning("Invalid cardinality of C_0")
+            print('[ refinement ] Invalid cardinality of C_0')
             return False
 
     self.classes *= -1
@@ -237,15 +255,9 @@ def indeg_guided(self):
     return True
 
 
-def partition_correct(self):
-    """ 
-    Routine to check if the partition is valid
-    :returns: True if the classes of the partition have the right cardinalities, false otherwise
-    """
-    for i in range(1, self.k+1):
-        if not np.where(self.classes == i)[0].size == self.classes_cardinality:
-            return False
-    return True
+##########################################################################
+######################## PAIR DEGREE REFINEMENT ##########################
+##########################################################################
 
 
 def within_degrees(self, c):
@@ -261,8 +273,7 @@ def within_degrees(self, c):
 
 
 def get_s_r_degrees(self,s,r):
-    """
-    Given two classes it returns a degree vector (indicator vector) where the degrees
+    """ Given two classes it returns a degree vector (indicator vector) where the degrees
     have been calculated with respecto to each other set.
     :param s: int, class s
     :param r: int, class r

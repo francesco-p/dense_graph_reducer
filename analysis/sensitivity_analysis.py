@@ -37,7 +37,7 @@ class SensitivityAnalysis:
 
         # SZE running parameters
         self.iteration_by_iteration = False
-        self.verbose = False
+        self.sze_verbose = False
         self.compression = 0.05
 
 
@@ -54,7 +54,8 @@ class SensitivityAnalysis:
         :param dset: the new dictionary hoding NG GT and the bounds
         """
         self.dset = dset
-        self.NG = self.dset['NG'] / self.dset['NG'].max()
+        #self.NG = self.dset['NG'] / self.dset['NG'].max()
+        self.NG = self.dset['NG']
         self.GT = self.dset['GT']
         self.labels = self.dset['labels']
         self.bounds = list(self.dset['bounds']) # to pass the test in find bounding epsilons
@@ -75,7 +76,7 @@ class SensitivityAnalysis:
                                                                     self.random_refinement,
                                                                     self.drop_edges_between_irregular_pairs)
         regular, k, classes, sze_idx = self.srla.run(iteration_by_iteration=self.iteration_by_iteration,
-                                                    verbose=self.verbose,
+                                                    verbose=self.sze_verbose,
                                                     compression_rate=self.compression)
         return regular, k, classes, sze_idx
 
@@ -173,7 +174,7 @@ class SensitivityAnalysis:
         for epsilon in self.epsilons:
             regular, k, classes, sze_idx = self.run_alg(epsilon)
             if self.verbose:
-                print(f"    {epsilon:.6f} {k} {regular}")
+                print(f"    {epsilon:.6f} {k} {regular} {sze_idx:.4f}")
             # Discard partition k=2
             if (k not in self.k_e_c_i) and regular and k!=2:
                 self.k_e_c_i[k] = (epsilon, classes, sze_idx)
@@ -201,7 +202,7 @@ class SensitivityAnalysis:
         return self.measures
 
 
-    def reconstruct_mat(self, thresh, classes, k):
+    def reconstruct_mat(self, thresh, classes, k, indensity_preservation=True):
         """
         Reconstruct the original matrix from a reduced one.
         :param thres: the edge threshold if the density between two pairs is over it we put an edge
@@ -221,14 +222,15 @@ class SensitivityAnalysis:
                     reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
 
         # Implements indensity information preservation
-        for c in range(1, k+1):
-            indices_c = np.where(classes == c)[0]
-            n = len(indices_c)
-            max_edges = (n*(n-1))/2
-            n_edges = np.tril(self.NG[np.ix_(indices_c, indices_c)], -1).sum()
-            indensity = n_edges / max_edges
-            if np.random.uniform(0,1,1) <= indensity:
-                 reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
+        if indensity_preservation:
+            for c in range(1, k+1):
+                indices_c = np.where(classes == c)[0]
+                n = len(indices_c)
+                max_edges = (n*(n-1))/2
+                n_edges = np.tril(self.NG[np.ix_(indices_c, indices_c)], -1).sum()
+                indensity = n_edges / max_edges
+                if np.random.uniform(0,1,1) <= indensity:
+                     reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
 
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
@@ -237,6 +239,23 @@ class SensitivityAnalysis:
     #################
     #### Metrics ####
     #################
+
+
+    def termo_metric(self, graph):
+        """
+        Creates a feature vector of with some measures of the graph
+        :param graph: np.array() reconstructed graph
+        :returns: np.array(float64) feature vector of measures
+        """
+        pass
+
+    def KLdivergence_metric(self, graph):
+        """
+        Computes thhe kulback liebeler divergence
+        :param graph: np.array() reconstructed graph
+        :returns: np.array(float64) feature vector of measures
+        """
+        pass
 
     def KVS_metric(self, graph):
         """
