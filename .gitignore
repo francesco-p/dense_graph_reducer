@@ -3,6 +3,7 @@ data/
 putils.py
 pymat/
 Session.vim
+venv/
 
 
 
