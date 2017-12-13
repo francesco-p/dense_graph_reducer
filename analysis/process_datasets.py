@@ -2,21 +2,30 @@ import scipy.io as sp
 import numpy as np
 import ipdb
 import pandas as pd
-import networkx as nx
 import matplotlib.pyplot as plt
 import os
 
-def search_dset(filename):
+def search_dset(filename, synth=False):
     """ Search for a .npz file into data/npz/ folder then if exists it returns the dictionary with NG, GT, bounds
     :param dataset: of the dataset
     :param sigma: sigma of the gaussian kernel
     :returns: None if no file or the dictionary
     """
-    path = "data/npz/"
-    for f in os.listdir(path):
-        if f == filename+".npz":
-            return np.load(path+f)
-    raise FileNotFoundError(f"{path}{filename}.npz")
+    if synth:
+        loaded = np.load(filename)
+        #print(f"#### [+] {n}_{d:.2f}_{dset_id}.npy correctly loaded ####")
+        data = {}
+        data['G'] = loaded['G']
+        data['GT'] = []
+        data['bounds'] = loaded['bounds']
+        data['labels'] = []
+        return data
+    else:
+        path = "data/npz/"
+        for f in os.listdir(path):
+            if f == filename+".npz":
+                return np.load(path+f)
+        raise FileNotFoundError(f"{path}{filename}.npz")
 
 
 def synthetic_graph(n, d):

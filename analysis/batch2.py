@@ -1,12 +1,15 @@
 """
-UTF-8
- 1. fix density d and size of the graph n 
- 2. process the 500 datasets    
- 3. find bounds and partitions 
- 4. for each partition then take the one with the maximum idx 
- 5. reconstruct the matrix with threshold 0 
- 6. compute the measures         
+File: batch2.py
+Description:
+ 1. fix density d and size of the graph n
+ 2. process the 500 datasets
+ 3. find bounds and partitions
+ 4. for each partition then take the one with the maximum idx
+ 5. reconstruct the matrix with threshold 0
+ 6. compute the measures
  7. plot foreach density
+Coding: UTF-8
+Author: lakj
 """
 import matplotlib.pyplot as plt
 import argparse
@@ -22,29 +25,24 @@ def work(pid, n, d, dset_ids):
 
     for dset_id in dset_ids:
         ### 2. ###
-        filename = f"./data/synthetic_graphs/{n}/{n}_{d:.2f}_{dset_id}.npy"
+        filename = f"./data/synthetic_graphs/{n}/{n}_{d:.2f}_{dset_id}.npz"
 
-        G = np.load(filename)
-        #print(f"#### [+] {n}_{d:.2f}_{dset_id}.npy correctly loaded ####")
-        data = {}
-        data['NG'] = G
-        data['GT'] = G
-        data['bounds'] = []
-        data['labels'] = []
+        data = proc.search_dset(filename, synth=True)
 
         ### 3. ###
         s = SensitivityAnalysis(data)
-        s.verbose = False
+
         bounds = s.find_bounds()
-        #print(f"[+] Bounding epsilons {s.bounds}")
+        if not s.bounds:
+            np.savez_compressed(filename, G=data['G'], bounds=bounds)
+
         kec = s.find_partitions()
 
         if kec == {}:
-            print(f"[x] {n}_{d:.2f}_{dset_id}.npy NO partitions found.")
+            print(f"[x] {n}_{d:.2f}_{dset_id}.npy")
 
         else:
 
-            #print(f"[+] Partitions {kec.keys()}")
             ### 4. ###
             max_idx = -1
             max_k = -1
@@ -62,16 +60,18 @@ def work(pid, n, d, dset_ids):
             ### 6. ###
             dist = s.L2_metric(sze_rec)
             print(f"[OK] {n}_{d:.2f}_{dset_id}.npy l2d:{dist:.4f} sze_idx:{kec[max_k][2]:.4f}")
-            with io.open(f'{n}_{d:.2f}.log', 'a') as f:
-                f.write(f"{dist:.4f}\n")
-         
+            with io.open(f'./data/synthetic_graphs/csv/{n}.csv', 'a') as f:
+                f.write(f"{n},{d:.2f},{dset_id},{dist:.4f},{kec[max_k][2]:.4f},{s.bounds[0]:.5f},{s.bounds[1]:.5f},1\n")
+
 ####################
 #denses = np.arange(0.5+(0.05*pid), 1, 0.05*procs)[::-1]
 
 procs = 4    #Number of processes to create
-n = 200
-n_graphs = 4
+n = 400
+n_graphs = 500
 densities = np.arange(0.5, 1, 0.05)
+with io.open(f'./data/synthetic_graphs/{n}.csv', 'w') as f:
+    f.write(f"n,density,dset_id,measure,sze_idx,edge,trivial,refinement\n")
 for d in densities:
     jobs = []
     for pid in range(0, procs):
@@ -84,6 +84,8 @@ for d in densities:
     for j in jobs:
             j.join()
 
+"""
+raise IOError("fuck")
 ### 7. ###
 data_to_plot = []
 for d in densities:
@@ -102,6 +104,7 @@ ax.boxplot(data_to_plot)
 ax.set_xticklabels(densities)
 plt.show()
 
+"""
 
 
 

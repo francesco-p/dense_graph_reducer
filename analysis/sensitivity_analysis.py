@@ -2,11 +2,12 @@
 File: sensitivity_analysis.py
 Description: This class performs a sensitivity analysis of the Szemeredi algorithm
 Coding: UTF-8
+Author: lakj
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matlab.engine
+#import matlab.engine we need to install it for the virtualenv
 import ipdb
 from sklearn import metrics
 import sys
@@ -18,7 +19,7 @@ class SensitivityAnalysis:
 
     def __init__(self, dset):
 
-        # NG GT
+        # G GT
         self.set_dset(dset)
 
         # Find bounds parameters
@@ -45,45 +46,35 @@ class SensitivityAnalysis:
         self.eng = None
 
         # Global print
-        self.verbose = True
+        self.verbose = False
 
 
     def set_dset(self, dset):
-        """
-        Change dataset
-        :param dset: the new dictionary hoding NG GT and the bounds
+        """ Change dataset
+        :param dset: the new dictionary hoding G GT and the bounds
         """
         self.dset = dset
-        #self.NG = self.dset['NG'] / self.dset['NG'].max()
-        self.NG = self.dset['NG']
+        #self.G = self.dset['G'] / self.dset['G'].max()
+        self.G = self.dset['G']
         self.GT = self.dset['GT']
         self.labels = self.dset['labels']
         self.bounds = list(self.dset['bounds']) # to pass the test in find bounding epsilons
 
 
     def run_alg(self, epsilon):
-        """
-        Creates and run the szemeredi algorithm with a particular dataset
+        """ Creates and run the szemeredi algorithm with a particular dataset
         if the partition found is regular, its cardinality, and how the nodes are partitioned
         :param epsilon: float, the epsilon parameter of the algorithm
         :returns: (bool, int, np.array)
         """
-        self.srla = slb.generate_szemeredi_reg_lemma_implementation(self.kind,
-                                                                    self.NG,
-                                                                    epsilon,
-                                                                    self.is_weighted,
-                                                                    self.random_initialization,
-                                                                    self.random_refinement,
-                                                                    self.drop_edges_between_irregular_pairs)
-        regular, k, classes, sze_idx = self.srla.run(iteration_by_iteration=self.iteration_by_iteration,
-                                                    verbose=self.sze_verbose,
-                                                    compression_rate=self.compression)
-        return regular, k, classes, sze_idx
+        self.srla = slb.generate_szemeredi_reg_lemma_implementation(self.kind, self.G, epsilon,
+                                                                    self.is_weighted, self.random_initialization,
+                                                                    self.random_refinement, self.drop_edges_between_irregular_pairs)
+        return self.srla.run(iteration_by_iteration=self.iteration_by_iteration, verbose=self.sze_verbose, compression_rate=self.compression)
 
 
     def find_trivial_epsilon(self, epsilon1, epsilon2):
-        """
-        Performs binary search to find the best trivial epsilon candidate:
+        """ Performs binary search to find the best trivial epsilon candidate:
         the first epsilon for which k=2
         del statements are essential to free unused memory
         :returns: float epsilon
@@ -115,10 +106,9 @@ class SensitivityAnalysis:
 
 
     def find_edge_epsilon(self, epsilon1, epsilon2):
-        """
-        Finds the first epsilon for which we have a regular partition.
+        """ Finds the first epsilon for which we have a regular partition.
         :returns: float epsilon
-        """ 
+        """
         step = (epsilon2 - epsilon1)/2.0
         if step < self.min_step:
             return epsilon2
@@ -138,8 +128,7 @@ class SensitivityAnalysis:
 
 
     def find_bounds(self):
-        """
-        Finds the bounding epsilons and set up the range where to search
+        """ Finds the bounding epsilons and set up the range where to search
         :returns: the two bounds found
         """
         if self.bounds:
@@ -166,8 +155,7 @@ class SensitivityAnalysis:
 
 
     def find_partitions(self):
-        """
-        Start looking for partitions
+        """ Find partitions of the graph
         :returns: a dictionary with the cardinality of the partition, the corresponding epsilon, the classes reduced array and the szemeredi index
         """
         self.k_e_c_i= {}
@@ -182,8 +170,7 @@ class SensitivityAnalysis:
 
 
     def thresholds_analysis(self, classes, k, thresholds, measure):
-        """
-        Start performing threshold analysis with a given measure
+        """ Performs threshold analysis with a given measure
         :param classes: the reduced array
         :param k: the cardinality of the patition
         :param measure: the measure to use
@@ -203,18 +190,17 @@ class SensitivityAnalysis:
 
 
     def reconstruct_mat(self, thresh, classes, k, indensity_preservation=True):
-        """
-        Reconstruct the original matrix from a reduced one.
+        """ Reconstruct the original matrix from a reduced one.
         :param thres: the edge threshold if the density between two pairs is over it we put an edge
         :param classes: the reduced graph expressed as an array
         :return: a numpy matrix of the size of GT
         """
-        reconstructed_mat = np.zeros((self.GT.shape[0], self.GT.shape[0]), dtype='float32')
+        reconstructed_mat = np.zeros((self.G.shape[0], self.G.shape[0]), dtype='float32')
         for r in range(2, k + 1):
             r_nodes = np.where(classes == r)[0]
             for s in range(1, r):
                 s_nodes = np.where(classes == s)[0]
-                bip_sim_mat = self.NG[np.ix_(r_nodes, s_nodes)]
+                bip_sim_mat = self.G[np.ix_(r_nodes, s_nodes)]
                 n = bip_sim_mat.shape[0]
                 bip_density = bip_sim_mat.sum() / (n ** 2.0)
                 # Put edges if above threshold
@@ -227,7 +213,7 @@ class SensitivityAnalysis:
                 indices_c = np.where(classes == c)[0]
                 n = len(indices_c)
                 max_edges = (n*(n-1))/2
-                n_edges = np.tril(self.NG[np.ix_(indices_c, indices_c)], -1).sum()
+                n_edges = np.tril(self.G[np.ix_(indices_c, indices_c)], -1).sum()
                 indensity = n_edges / max_edges
                 if np.random.uniform(0,1,1) <= indensity:
                      reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
@@ -242,24 +228,21 @@ class SensitivityAnalysis:
 
 
     def termo_metric(self, graph):
-        """
-        Creates a feature vector of with some measures of the graph
+        """ Creates a feature vector of with some measures of the graph
         :param graph: np.array() reconstructed graph
         :returns: np.array(float64) feature vector of measures
         """
         pass
 
     def KLdivergence_metric(self, graph):
-        """
-        Computes thhe kulback liebeler divergence
+        """ Computes thhe kulback liebeler divergence
         :param graph: np.array() reconstructed graph
         :returns: np.array(float64) feature vector of measures
         """
         pass
 
     def KVS_metric(self, graph):
-        """
-        Implements Knn Voting System to calculate if the labeling is correct.
+        """ Implements Knn Voting System to calculate if the labeling is correct.
         :param graph: reconstructed graph
         :returns: adjusted random score
         """
@@ -286,17 +269,15 @@ class SensitivityAnalysis:
 
 
     def L2_metric(self, graph):
-        """
-        Compute the normalized L2 distance between two matrices
+        """ Compute the normalized L2 distance between two matrices
         :param graph: np.array, reconstructed graph
         :returns: float, L2 norm
         """
-        return np.linalg.norm(self.GT-graph)/self.GT.shape[0]
+        return np.linalg.norm(self.G-graph)/self.G.shape[0]
 
 
     def ACT_metric(self, graph):
-        """
-        Compute Amplitude Commute Time with a Matlab engine request, it does not
+        """ Compute Amplitude Commute Time with a Matlab engine request, it does not
         apply the Gaussian Kernel
         :param graph: reconstructed graph
         :returns: L2 distance between GT_t and abs(NG_t-1)
@@ -314,8 +295,7 @@ class SensitivityAnalysis:
 
 
     def NGU_metric(self, graph):
-        """
-        Compute Nguyen metric
+        """ Compute Nguyen metric
         :param graph: reconstructed graph
         :returns: accuracy of Nguyen paper
         """
@@ -324,7 +304,7 @@ class SensitivityAnalysis:
             self.eng = matlab.engine.start_matlab()
             self.eng.addpath(r'./matlab_code',nargout=0)
 
-        mat_NG = matlab.double(self.NG.tolist())
+        mat_NG = matlab.double(self.G.tolist())
         mat_sze_rec = matlab.double(graph.tolist())
 
         ipdb.set_trace()
