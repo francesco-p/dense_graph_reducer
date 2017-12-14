@@ -13,7 +13,6 @@ import process_datasets as proc
 from sensitivity_analysis import SensitivityAnalysis
 
 
-
 # Argparse
 parser = argparse.ArgumentParser(description="Analysis of Szemeredi algorithm implementation")
 parser.add_argument("dataset", help="Dataset name", type=str)
