@@ -70,7 +70,7 @@ def plot_graphs(graph, sze):
 ######################################################
 
 ### 1. Fix density d and size of the graph n ###
-n = 200
+n = 1000
 d = 0.7
 
 G = synthetic_graph(n, d)
@@ -85,7 +85,7 @@ data['bounds'] = []
 data['labels'] = []
 
 ### 3. Instantiate the analysis class ###
-s = SensitivityAnalysis(data)
+s = SensitivityAnalysis(data, 'degree_based')
 s.verbose = True
 
 ### 4. Find bounds ###

@@ -1,11 +1,10 @@
 import szemeredi_regularity_lemma as srl
 import partition_initialization
-import refinement_step
 import conditions
 
 
 def generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization,
-                                                random_refinement, drop_edges_between_irregular_pairs):
+                                                refinement, drop_edges_between_irregular_pairs):
     """
     generate an implementation of the Szemeredi regularity lemma for the graph summarization
     :param kind: the kind of implementation to generate. The currently accepted strings are 'alon' for the Alon
@@ -22,16 +21,12 @@ def generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weigh
     """
     alg = srl.SzemerediRegularityLemma(sim_mat, epsilon, is_weighted, drop_edges_between_irregular_pairs)
 
+    alg.refinement_step = refinement
+
     if random_initialization:
         alg.partition_initialization = partition_initialization.random
     else:
         alg.partition_initialization = partition_initialization.degree_based
-
-    if random_refinement:
-        alg.refinement_step = refinement_step.random
-    else:
-        #alg.refinement_step = refinement_step.degree_based
-        alg.refinement_step = refinement_step.indeg_guided
 
     if kind == "alon":
         alg.conditions = [conditions.alon1, conditions.alon2, conditions.alon3]

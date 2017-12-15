@@ -13,26 +13,34 @@ from sklearn import metrics
 import sys
 sys.path.insert(1, '../graph_reducer/')
 import szemeredi_lemma_builder as slb
+import refinement_step as rs
 
 
 class SensitivityAnalysis:
 
-    def __init__(self, dset):
+    def __init__(self, dset, refinement):
 
         # G GT
         self.set_dset(dset)
 
         # Find bounds parameters
         self.min_k = 2
-        self.min_step = 0.00001
+        self.min_step = 0.01 #0.00001
         self.tries = 20
 
 
         # SZE algorithm parameters
         self.kind = "alon"
-        self.is_weighted = True
+        self.is_weighted = False
         self.random_initialization = True
-        self.random_refinement = False # No other choice
+
+        if refinement == 'degree_based':
+            self.refinement = rs.degree_based
+        elif refinement == 'indeg_guided':
+            self.refinement = rs.indeg_guided
+        else:
+            self.refinement = rs.degree_based
+
         self.drop_edges_between_irregular_pairs = True
 
 
@@ -40,6 +48,10 @@ class SensitivityAnalysis:
         self.iteration_by_iteration = False
         self.sze_verbose = False
         self.compression = 0.05
+
+
+        # Reconstruction parameters
+        self.indensity_preservation = True
 
 
         # Matlab eng
@@ -69,7 +81,7 @@ class SensitivityAnalysis:
         """
         self.srla = slb.generate_szemeredi_reg_lemma_implementation(self.kind, self.G, epsilon,
                                                                     self.is_weighted, self.random_initialization,
-                                                                    self.random_refinement, self.drop_edges_between_irregular_pairs)
+                                                                    self.refinement, self.drop_edges_between_irregular_pairs)
         return self.srla.run(iteration_by_iteration=self.iteration_by_iteration, verbose=self.sze_verbose, compression_rate=self.compression)
 
 
@@ -144,7 +156,7 @@ class SensitivityAnalysis:
         self.epsilons = [epsilon1]
         # Try self.tries different epsilons inside the bounds
         offs = (epsilon2 - epsilon1) / self.tries
-        for i in range(1, int(self.tries)+1):
+        for i in range(1, self.tries+1):
             self.epsilons.append(epsilon1 + (i*offs))
 
         return self.bounds
@@ -159,7 +171,6 @@ class SensitivityAnalysis:
             regular, k, classes, sze_idx = self.run_alg(epsilon)
             if self.verbose:
                 print(f"    {epsilon:.6f} {k} {regular} {sze_idx:.4f}")
-            # Discard partition k=2
             if (k not in self.k_e_c_i) and regular:# and k!=2:
                 self.k_e_c_i[k] = (epsilon, classes, sze_idx)
         return self.k_e_c_i
@@ -176,16 +187,13 @@ class SensitivityAnalysis:
         for thresh in thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
             res = measure(sze_rec)
-            #plt.imshow(sze_rec)
-            #plt.title(f"l2(GT, rec_{k}_{thresh:.03f}):{thresh:.03f} = {res}")
-            #plt.savefig(f"/tmp/sze_{k}_{thresh:.03f}.png")
             if self.verbose:
                 print(f"    {res:.5f}")
             self.measures.append(res)
         return self.measures
 
 
-    def reconstruct_mat(self, thresh, classes, k, indensity_preservation=True):
+    def reconstruct_mat(self, thresh, classes, k):
         """ Reconstruct the original matrix from a reduced one.
         :param thres: the edge threshold if the density between two pairs is over it we put an edge
         :param classes: the reduced graph expressed as an array
@@ -204,7 +212,7 @@ class SensitivityAnalysis:
                     reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
 
         # Implements indensity information preservation
-        if indensity_preservation:
+        if self.indensity_preservation:
             for c in range(1, k+1):
                 indices_c = np.where(classes == c)[0]
                 n = len(indices_c)
