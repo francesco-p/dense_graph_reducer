@@ -84,11 +84,9 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            if self.verbose:
-                print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
             regular, k, classes, sze_idx = self.run_alg(epsilon_middle)
             if self.verbose:
-                print(f"{k} {regular}")
+                print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}| {k} {regular}")
 
             if regular:
                 if k==self.min_k:
@@ -114,11 +112,9 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            if self.verbose:
-                print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}|", end=" ")
             regular, k, classes, sze_idx = self.run_alg(epsilon_middle)
             if self.verbose:
-                print(f"{k} {regular}")
+                print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}| {k} {regular}")
             if regular:
                 del self.srla
                 return self.find_edge_epsilon(epsilon1, epsilon_middle)
@@ -164,7 +160,7 @@ class SensitivityAnalysis:
             if self.verbose:
                 print(f"    {epsilon:.6f} {k} {regular} {sze_idx:.4f}")
             # Discard partition k=2
-            if (k not in self.k_e_c_i) and regular and k!=2:
+            if (k not in self.k_e_c_i) and regular:# and k!=2:
                 self.k_e_c_i[k] = (epsilon, classes, sze_idx)
         return self.k_e_c_i
 

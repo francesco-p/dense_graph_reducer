@@ -71,7 +71,7 @@ def plot_graphs(graph, sze):
 
 ### 1. Fix density d and size of the graph n ###
 n = 200
-d = 0.70
+d = 0.7
 
 G = synthetic_graph(n, d)
 check_validity(G, n, d)
@@ -103,7 +103,7 @@ print(f"[+] Finding partitions ...")
 keci = s.find_partitions()
 
 if keci == {}:
-    print(f"[x] No partitions with k>2 found")
+    print(f"[x] No partition found")
 
 else:
     print(f"[+] {len(keci.keys())} partitions found")
